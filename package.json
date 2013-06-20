@@ -13,7 +13,7 @@
     "url": "git://github.com/3meters/chek.git"
   },
   "dependencies": [
-    { "tipe": "*" }
+    { "tipe": "tipe" }
   ],
   "main": "chek.js",
   "scripts": { "test": "node test.js" },

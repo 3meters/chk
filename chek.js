@@ -4,8 +4,10 @@
  * Synchronous parameter checker. Returns null on success or
  * an error if the passsed-in object mismatches the passed-in
  * schema. May modify the passed-in object via the defaults param
- * of the schema, but never modifies the passed-in schema. Iterates
- * for fields of type array. Recurses for fields of type object.
+ * of the schema, via type coersion, or via arbitrary code in
+ * schema validator functions. Does not modify the passed-in
+ * schema. Iterates for fields of type array. Recurses for fields
+ * of type object.
  *
  * Copyright (c) 2013 3meters.  All rights reserved.
  *
@@ -13,7 +15,8 @@
  */
 
 
-var tipe = require('tipe')
+var inspect = require('util').inspect
+var tipe = require('../tipe')
 var isObject = tipe.isObject
 var isArray = tipe.isArray
 var isString = tipe.isString
@@ -24,11 +27,11 @@ var isUndefined = tipe.isUndefined
 // Main
 function chek(value, schema, options) {
 
-  // make sure the schema is valid
+  // Make sure the schema is valid
   var err = checkSchema(schema)
   if (err) return err
 
-  // configure options
+  // Configure options
   options = options || {}
   options.strict = options.strict || false  // allow non-specified fields
   options.ignoreDefaults = options.ignoreDefaults || false
@@ -38,7 +41,7 @@ function chek(value, schema, options) {
   options.rootValue = value
   options.rootSchema = schema
 
-  // do the work
+  // Do the work
   err = doCheck(value, schema, options)
   if (err) err.validArguments = schema
   return err
@@ -49,16 +52,16 @@ function chek(value, schema, options) {
 function checkSchema(schema) {
 
   if (!isObject(schema)) {
-    return perr.missingParam('schema must be an object')
+    return fail('Invalid type: schema must be an object')
   }
 
   // first try a scalar-target schema
-  var err = doCheck(schema, _schema, {strict: true})
+  var err = doCheck(schema, _schema)
   if (err) {
     // try an object-target schema
     for (var key in schema) {
-      err = doCheck(schema[key], _schema, {strict: true})
-      if (err) return perr.badSchema(err)
+      err = doCheck(schema[key], _schema)
+      if (err) return fail('Invalid schema:', err)
     }
   }
   return null // success
@@ -71,8 +74,6 @@ var _schema = {
   required: { type: 'boolean' },
   default:  { },
   value:    { type: 'string|number|boolean|object|function' },
-  comment:  { type: 'string' },
-  ref:      { type: 'string' },
   strict:   { type: 'boolean' },
 }
 
@@ -83,6 +84,7 @@ var _schema = {
 function doCheck(value, schema, options) {
 
   var err = null
+  options = options || {}
 
   options.key = options.key || ''
 
@@ -106,7 +108,8 @@ function doCheck(value, schema, options) {
   if (!options.ignoreRequired &&
       schema.required &&
       (isUndefined(value) || isNull(value))) {
-    return perr.missingParam(options.key, {value: value, schema: schema})
+    return fail('Missing required parameter: ' + options.key,
+        {value: value, schema: schema})
   }
 
   if (!isObject(value)) { // arrays?
@@ -122,7 +125,7 @@ function doCheck(value, schema, options) {
   if (beStrict) {
     for (var key in value) {
       if (!schema[key]) {
-        return perr.badParam(key, {value: value, schema: schema})
+        return fail('Invalid key: ' + key, {value: value, schema: schema})
       }
     }
   }
@@ -143,9 +146,8 @@ function doCheck(value, schema, options) {
     if (!options.ignoreRequired &&
         schema[key].required &&
         (isUndefined(value[key]) || isNull(value[key]))) {
-      return perr.missingParam(key, {
-        value: value, schema: schema
-      })
+      return fail('Missing required parameter ' + key,
+          {value: value, schema: schema})
     }
   }
 
@@ -167,8 +169,8 @@ function doCheck(value, schema, options) {
 
       case 'array':
         if (!schema[key]) break
-        if (match('array', schema[key].type)) {
-          return perr.badType('schema does not allow value of type array',
+        if (!match('array', schema[key].type)) {
+          return fail('Invalid type: schema does not allow value of type array',
               {schema: schema, value: value})
         }
         if (schema[key].value) {
@@ -220,10 +222,8 @@ function checkValue(value, schema, options) {
   // Check type, matching |-delimited target, i.e. 'string|number|boolean'
   if (schema.type && !isUndefined(value) && !isNull(value) &&
       !match(tipe(value), schema.type)) {
-    return perr.badType(options.key + ': ' + schema.type, {
-      value: value,
-      schema: schema,
-    })
+    return fail('Invalid type ' + options.key + ': ' + schema.type,
+        {value: value, schema: schema})
   }
 
   switch (tipe(schema.value)) {
@@ -232,10 +232,10 @@ function checkValue(value, schema, options) {
       break
 
     case 'function':
-      // Set by the public web method to ensure that we don't run
-      // arbitrary code uploaded from outside
+      // Untrusted turns off function validators.  Useful if library
+      // is exposed publically
       if (options.untrusted) {
-        return perr.forbidden('function validators not allowed')
+        return fail('Function validators not allowed')
       }
       // Call the validator function. Validators must return null
       // on success or an Error on failure. Perform cross-key
@@ -246,20 +246,22 @@ function checkValue(value, schema, options) {
 
     case 'string':
       if (!match(value, schema.value)) {
-        return perr.badValue(options.key + ': ' + schema.value, {value: value, schema: schema})
+        return fail('Invalid value ' + options.key + ': ' + schema.value,
+            {value: value, schema: schema})
       }
       break
 
     case 'number':
     case 'boolean':
       if (schema.value !== value) {
-        return perr.badValue(options.key + ': ' + schema.value, {value: value, schema: schema})
+        return fail('Invalid value ' + options.key + ': ' + schema.value,
+            {value: value, schema: schema})
       }
       break
 
     default:
-      return perr.serverError('Invalid call to check, unsupported ' +
-          'value type: ' + schema.value, {value: value, schema: schema})
+      return fail('Invalid value type: ' + schema.value,
+          {value: value, schema: schema})
   }
   return null // success
 }
@@ -285,8 +287,15 @@ function coerce(value, schema) {
 }
 
 
-// Poor man's enum
-// Return true if 'bar' equals any of 'foo|bar|baz'
+// Error helper
+function fail(msg, data) {
+  if (isObject(msg)) msg = inspect(msg)
+  if (isObject(data)) msg += '\n' + inspect(data)
+  return new Error(msg)
+}
+
+
+// Pipe-delimited enum: returns true if 'bar' equals any of 'foo|bar|baz'
 function match(str, strEnum) {
   if (!isString(strEnum)) return false
   return strEnum.split('|').some(function(member) {
@@ -298,7 +307,7 @@ function match(str, strEnum) {
 // Returns null for objects that JSON can't serialize
 function clone(obj) {
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
-  catch() { return null }
+  catch(e) { return null }
   return clonedObj
 }
 
