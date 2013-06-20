@@ -3,7 +3,7 @@
  */
 
 var assert = require('assert')
-var tipe = require('../tipe')
+var tipe = require('tipe')
 var chek = require('./chek')
 
 

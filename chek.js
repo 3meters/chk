@@ -16,7 +16,7 @@
 
 
 var inspect = require('util').inspect
-var tipe = require('../tipe')
+var tipe = require('tipe')
 var isObject = tipe.isObject
 var isArray = tipe.isArray
 var isString = tipe.isString

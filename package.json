@@ -12,9 +12,9 @@
     "type": "git",
     "url": "git://github.com/3meters/chek.git"
   },
-  "dependencies": [
-    { "tipe": "tipe" }
-  ],
+  "dependencies": {
+    "tipe": "*"
+  },
   "main": "chek.js",
   "scripts": { "test": "node test.js" },
   "license": "MIT",
