@@ -1,0 +1,22 @@
+{
+  "name": "chek",
+  "version": "0.1.0",
+  "description": "Template-driven javascript parameter checker",
+  "homepage": "https://github.com/3meters/chek",
+  "keywords": [ "parameter", "check", "checker", "schema" ],
+  "author": {
+    "name": "George Snelling",
+    "email": "george@3meters.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/3meters/chek.git"
+  },
+  "dependencies": [
+    { "tipe": "*" }
+  ],
+  "main": "chek.js",
+  "scripts": { "test": "node test.js" },
+  "license": "MIT",
+  "readmeFilename": "Readme.md"
+}
