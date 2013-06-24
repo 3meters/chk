@@ -22,7 +22,7 @@
 
 
 var util = require('util')
-var tipe = require('tipe')
+var tipe = require('tipe')  // type checker, https://github.com:3meters/tipe
 var isUndefined = tipe.isUndefined
 var isNull = tipe.isNull
 var isBoolean = tipe.isBoolean
@@ -59,7 +59,7 @@ function chek(value, schema, options) {
 function checkSchema(schema) {
 
   if (isUndefined(schema)) {
-    return fail('missingRequired', 'Schema object is required')
+    return fail('missingParam', 'Schema object is required')
   }
 
   if (!isObject(schema)) {
@@ -96,8 +96,12 @@ function doCheck(value, schema, options) {
 
   var err = null
   options = options || {}
-
   options.key = options.key || ''
+  var args = {
+    value: value,
+    schema: schema,
+    options: options
+  }
 
   if (!isObject(schema)) return null  // success
 
@@ -119,7 +123,7 @@ function doCheck(value, schema, options) {
   if (!options.ignoreRequired &&
       schema.required &&
       (isUndefined(value) || isNull(value))) {
-    return fail('missingRequired', options.key, {value: value, schema: schema})
+    return fail('missingParam', options.key, args)
   }
 
   if (!isObject(value)) { // arrays?
@@ -135,7 +139,7 @@ function doCheck(value, schema, options) {
   if (beStrict) {
     for (var key in value) {
       if (!schema[key]) {
-        return fail('badKey', key, {value: value, schema: schema})
+        return fail('badKey', key, args)
       }
     }
   }
@@ -156,7 +160,7 @@ function doCheck(value, schema, options) {
     if (!options.ignoreRequired &&
         schema[key].required &&
         (isUndefined(value[key]) || isNull(value[key]))) {
-      return fail('missingRequired', key, {value: value, schema: schema})
+      return fail('missingParam', key, args)
     }
   }
 
@@ -179,8 +183,7 @@ function doCheck(value, schema, options) {
       case 'array':
         if (!schema[key]) break
         if (!match('array', schema[key].type)) {
-          return fail('badType', 'Schema does not allow value of type array',
-              {schema: schema, value: value})
+          return fail('badType', 'Value may not be an array', args)
         }
         if (schema[key].value) {
           value[key].forEach(function(elm) {
@@ -218,6 +221,12 @@ function checkValue(value, schema, options) {
   log('schema:', schema)
   */
 
+  var args = {
+    value: value,
+    schema: schema,
+    options: options,
+  }
+
   if (!isObject(schema)) return null  // success
 
   if (isNull(value) || isUndefined(value)) return null // success
@@ -231,8 +240,7 @@ function checkValue(value, schema, options) {
   // Check type, matching |-delimited target, i.e. 'string|number|boolean'
   if (schema.type && !isUndefined(value) && !isNull(value) &&
       !match(tipe(value), schema.type)) {
-    return fail('badType', options.key + ': ' + schema.type,
-        {value: value, schema: schema})
+    return fail('badType', options.key + ': ' + schema.type, args)
   }
 
   switch (tipe(schema.value)) {
@@ -244,7 +252,7 @@ function checkValue(value, schema, options) {
       // Untrusted turns off function validators.  Useful if library
       // is exposed publically
       if (options.untrusted) {
-        return fail('badSchema', 'Function validators not allowed')
+        return fail('badSchema', 'Function validators are not allowed', args)
       }
       // Call the validator function. Validators must return null
       // on success or an Error on failure. Perform cross-key
@@ -255,21 +263,19 @@ function checkValue(value, schema, options) {
 
     case 'string':
       if (!match(value, schema.value)) {
-        return fail('badValue', options.key + ': ' + schema.value,
-            {value: value, schema: schema})
+        return fail('badValue', options.key + ': ' + schema.value, args)
       }
       break
 
     case 'number':
     case 'boolean':
       if (schema.value !== value) {
-        return fail('badValue', options.key + ': ' + schema.value,
-            {value: value, schema: schema})
+        return fail('badValue', options.key + ': ' + schema.value, args)
       }
       break
 
     default:
-      return fail('badType', schema.value, {value: value, schema: schema})
+      return fail('badType', schema.value, args)
   }
   return null // success
 }
@@ -294,19 +300,19 @@ function coerce(value, schema) {
 }
 
 
-// Error helper
-function fail(code, msg, data) {
+// Error helper to return the full context of the failure
+function fail(code, msg, info) {
 
   var errCodeMap = {
+    missingParam: 'Missing Required Parameter',
+    badKey: 'Unrecognized Parameter',
     badType: 'Invalid Type',
     badValue: 'Invalid Value',
     badSchema: 'Invalid Schema',
-    missingRequired: 'Missing Required Parameter',
-    badKey: 'Unrecognized Parameter',
   }
 
   if (isObject(msg)) msg = util.inspect(msg)
-  if (isObject(data)) msg += '\n' + util.inspect(data)
+  if (isObject(info)) msg += '\n' + util.inspect(info)
   var err = new Error(errCodeMap[code] + ': ' + msg)
   err.code = code
   return err
@@ -331,7 +337,7 @@ function clone(obj) {
 
 
 // True for positive numbers, strings castable to positive numbers,
-// or the English strings 'true' or 'yes'
+// or the strings 'true' or 'yes'
 function truthy(val) {
   if (isNumber(val)) return (val > 0)  // negative numbers are false
   if (!isString(val)) return (val)     // fall back to javascript

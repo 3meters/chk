@@ -64,7 +64,7 @@ function getValue() {
 tests.failsNicelyOnEmpty = function() {
   var err = chek()
   assert(isError(err))
-  assert('missingRequired' === err.code)
+  assert('missingParam' === err.code)
 }
 
 
@@ -177,7 +177,7 @@ tests.missingRequiredScalar = function() {
   var value = null
   var err = chek(value, schema)
   assert(isError(err))
-  assert('missingRequired' === err.code)
+  assert('missingParam' === err.code)
 }
 
 tests.missingRequiredObject = function() {
@@ -185,7 +185,7 @@ tests.missingRequiredObject = function() {
   var value = null
   var err = chek(value, schema)
   assert(isError(err))
-  assert('missingRequired' === err.code)
+  assert('missingParam' === err.code)
 }
 
 tests.missingRequiredObject2 = function() {
@@ -196,7 +196,7 @@ tests.missingRequiredObject2 = function() {
   var value = { s1: 'foo' }
   var err = chek(value, schema)
   assert(isError(err))
-  assert('missingRequired' === err.code)
+  assert('missingParam' === err.code)
 }
 
 tests.missingRequiredNestedScalar = function() {
@@ -215,7 +215,7 @@ tests.missingRequiredNestedScalar = function() {
   }
   var err = chek(value, schema)
   assert(isError(err))
-  assert('missingRequired' === err.code)
+  assert('missingParam' === err.code)
 }
 
 tests.strictWorks = function() {
