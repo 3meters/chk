@@ -58,23 +58,36 @@ function chek(value, schema, options) {
 // Validate the user-provided schema against the meta schema
 function checkSchema(schema) {
 
+  var err
+
   if (isUndefined(schema)) {
-    return fail('missingParam', 'Schema object is required')
+    return fail('missingParam', 'Schema is required')
   }
 
   if (!isObject(schema)) {
     return fail('badType', 'Schema must be an object')
   }
 
-  // first try a scalar-target schema
-  var err = doCheck(schema, _schema)
-  if (err) {
-    // try an object-target schema
-    for (var key in schema) {
-      err = doCheck(schema[key], _schema)
-      if (err) return fail('badSchema', err.message)
+  // Schema may target scalars or objects, figure out which
+  var targetIsScalar = true
+  for (var key in schema) {
+    if (!_schema[key]) {
+      targetIsScalar = false
+      break
     }
   }
+
+  if (targetIsScalar) {
+    err = doCheck(schema, _schema)
+  }
+  else {
+    for (var key in schema) {
+      err = doCheck(schema[key], _schema)
+      if (err) break
+    }
+  }
+
+  if (err) return fail('badSchema', err.message)
   return null // success
 }
 

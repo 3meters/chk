@@ -295,11 +295,10 @@ tests.schemasCannotMistypeSchemaFields = function() {
 }
 
 
-
 // Run tests
-console.log('chek tests:\n')
+console.log('\nchek tests\n==========')
 for (var test in tests) {
   tests[test]()
   console.log(test)
 }
-console.log('\npass')
+console.log('\nchek tests pass')
