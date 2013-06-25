@@ -306,7 +306,7 @@ function coerce(value, schema) {
       if (value === '0') value = 0
       break
     case 'boolean':
-      value = truthy(value)
+      value = tipe.isTruthy(value)
       break
   }
   return value
@@ -346,18 +346,6 @@ function clone(obj) {
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
   catch(e) { return null }
   return clonedObj
-}
-
-
-// True for positive numbers, strings castable to positive numbers,
-// or the strings 'true' or 'yes'
-function truthy(val) {
-  if (isNumber(val)) return (val > 0)  // negative numbers are false
-  if (!isString(val)) return (val)     // fall back to javascript
-  val = val.toLowerCase()
-  if (val === 'true' || val === 'yes') return true
-  if (parseInt(val) > 0) return true
-  return false
 }
 
 
