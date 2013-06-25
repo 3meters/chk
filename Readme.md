@@ -1,10 +1,10 @@
-#chek
+#chk
 
   Template-driven, schema-inspired javascript parameter checker
 
 ## Install with nodejs
 
-    npm install chek
+    npm install chk
 
 ## Use
 
