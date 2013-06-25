@@ -152,7 +152,7 @@ function doCheck(value, schema, options) {
   if (beStrict) {
     for (var key in value) {
       if (!schema[key]) {
-        return fail('badKey', key, args)
+        return fail('badParam', key, args)
       }
     }
   }
@@ -318,7 +318,7 @@ function fail(code, msg, info) {
 
   var errCodeMap = {
     missingParam: 'Missing Required Parameter',
-    badKey: 'Unrecognized Parameter',
+    badParam: 'Unrecognized Parameter',
     badType: 'Invalid Type',
     badValue: 'Invalid Value',
     badSchema: 'Invalid Schema',

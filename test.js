@@ -236,7 +236,7 @@ tests.strictWorks = function() {
   var options = { strict: true }
   var err = chek(value, schema, options)
   assert(isError(err))
-  assert('badKey' === err.code)
+  assert('badParam' === err.code)
 }
 
 
