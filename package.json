@@ -1,8 +1,8 @@
 {
-  "name": "chek",
+  "name": "chk",
   "version": "0.1.0",
-  "description": "Template-driven javascript parameter checker",
-  "homepage": "https://github.com/3meters/chek",
+  "description": "Simple recursive template-driven parameter checker",
+  "homepage": "https://github.com/3meters/chk",
   "keywords": [ "parameter", "check", "checker", "schema" ],
   "author": {
     "name": "George Snelling",
@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/3meters/chek.git"
+    "url": "git://github.com/3meters/chk.git"
   },
   "dependencies": {
     "tipe": "*"
   },
-  "main": "chek.js",
+  "main": "chk.js",
   "scripts": { "test": "node test.js" },
   "license": "MIT",
   "readmeFilename": "Readme.md"

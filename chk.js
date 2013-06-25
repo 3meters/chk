@@ -1,17 +1,17 @@
 /**
- * chek.js
+ * chk.js
  *
- * var err = chek(value, schema, options)
+ * var err = chk(value, schema, options)
  * if (err) throw err
  * ...
  *
- * Chek is a synchronous parameter checker. It returns null on
+ * Chk is a synchronous parameter checker. It returns null on
  * success or an error if the passsed-in object mismatches the
  * passed-in schema.
  *
- * Chek is not idempotent.  It may modify the passed-in value
+ * Chk is not idempotent.  It may modify the passed-in value
  * via the defaults parameter of the schema, via type coersion,
- * or via arbitrary code in schema validator functions. Chek
+ * or via arbitrary code in schema validator functions. Chk
  * never modifies the passed-in schema. Iterates for fields of
  * type array. Recurses for fields of type object.
  *
@@ -32,7 +32,7 @@ var isObject = tipe.isObject
 
 
 // Main
-function chek(value, schema, options) {
+function chk(value, schema, options) {
 
   // Make sure the schema is valid
   var err = checkSchema(schema)
@@ -92,7 +92,7 @@ function checkSchema(schema) {
 }
 
 
-// Meta schema for chek schemas
+// Meta schema for chk schemas
 var _schema = {
   type:     { type: 'string' },
   required: { type: 'boolean' },
@@ -350,4 +350,4 @@ function clone(obj) {
 
 
 // Export
-module.exports = chek
+module.exports = chk
