@@ -5,15 +5,29 @@
  */
 
 var assert = require('assert')
-var tipe = require('tipe')      // type checker -- https://github.com:3meters/tipe
+var tipe = require('tipe')    // type checker -- https://github.com:3meters/tipe
 var isError = tipe.isError
+var isNull = tipe.isNull
 var chk = require('./chk')
 var tests = {}
 
 
-// helper
-function getSchema() {
+tests.failsProperlyOnEmpty = function() {
+  var err = chk()
+  assert(isError(err))
+  assert('missingParam' === err.code)
+}
 
+tests.minimalWorks = function() {
+  var schema = {type: 'number', required: true}
+  var err = chk(1, schema)
+  assert(isNull(err))
+  err = chk('foo', schema)
+  assert(isError(err))
+  assert('badType' === err.code)
+}
+
+tests.bigSuccedes = function() {
   var schema = {
     s1: { type: 'string', required: true },
     s2: { type: 'string', default: 'hi' },
@@ -44,11 +58,6 @@ function getSchema() {
         }}
     },
   }
-  return schema
-}
-
-
-function getValue() {
   var value = {
     s1: 'hello',
     o1: { s1: 'foo', n1: 1, b1: true },
@@ -57,20 +66,6 @@ function getValue() {
     a1: ['123', '456', '789'],
     a2: [{s1: 'foo'}, {s1: 'bar'}, {s1: 'baz'}, {s1: 'barney'}],
   }
-  return value
-}
-
-
-tests.failsNicelyOnEmpty = function() {
-  var err = chk()
-  assert(isError(err))
-  assert('missingParam' === err.code)
-}
-
-
-tests.basicSuccedes = function() {
-  var value = getValue()
-  var schema = getSchema()
   var err = chk(value, schema, {strict: true})
   if (err) throw err
   assert(value.s2)
@@ -81,59 +76,7 @@ tests.basicSuccedes = function() {
   assert(0 === value.o1.n3)
 }
 
-
-/*
-tests.basicSuccedesProperly = function() {
-  var schema = {
-    str1: {type: 'string', required: true},
-    num1: {type: 'number', required: true},
-    boo1: {type: 'boolean', required: true},
-    arr1: {type: 'array'},
-    obj1: {type: 'object', value: {
-      str1: {type: 'string'},
-      str3: {type: 'string', default: '345'}
-    }},
-    num2: {type: 'number', default: 10},
-  }
-  var value =  {
-    str1: 'hello',
-    num1: 1,
-    boo1: true,
-    // arr1: [],
-    obj1: {
-      str1: '123',
-      str2: '234',
-    },
-  },
-  var err = chk(value, schema, )
-      options: {
-        setDefaults: true
-      },
-    },
-  }, function(err, res, body) {
-    t.assert(body.value.num2 === 10)
-    t.assert(body.value.obj1.str3 === '345')
-    test.done()
-  })
-}
-*/
-
-tests.minimalSuccedes = function() {
-  var schema = {type: 'number', required: true}
-  var value = 1
-  var err = chk(value, schema)
-  if (err) throw err
-}
-
-tests.minimalFailsProperly = function() {
-  var schema = {type: 'number', required: true}
-  var value = 'foo'
-  var err = chk(value, schema)
-  assert(isError(err))
-  assert('badType' === err.code)
-}
-
-tests.coerceStringsWorks = function() {
+tests.coerceStrings = function() {
   var schema = {
     n1: {type: 'number'},
     n2: {type: 'number'},
@@ -181,14 +124,6 @@ tests.missingRequiredScalar = function() {
 }
 
 tests.missingRequiredObject = function() {
-  var schema =  {type: 'object', required: true}
-  var value = null
-  var err = chk(value, schema)
-  assert(isError(err))
-  assert('missingParam' === err.code)
-}
-
-tests.missingRequiredObject2 = function() {
   var schema = {
     s1: {type: 'string'},
     o1: {type: 'object', required: true}
@@ -199,7 +134,7 @@ tests.missingRequiredObject2 = function() {
   assert('missingParam' === err.code)
 }
 
-tests.missingRequiredNestedScalar = function() {
+tests.missingRequiredNested = function() {
   var schema = {
     s1: {type: 'string'},
     o1: {type: 'object', required: true, value: {
@@ -207,11 +142,17 @@ tests.missingRequiredNestedScalar = function() {
       }
     }
   }
+
   var value = {
     s1: 'foo',
-    o1: {
-      s2: 'I am not s1'
-    }
+    o1: {s1: 'I am nested s1'}
+  }
+  var err = chk(value, schema)
+  assert(!err)
+
+  var value = {
+    s1: 'foo',
+    o1: {s2: 'I am not nested s1'}
   }
   var err = chk(value, schema)
   assert(isError(err))
@@ -238,7 +179,6 @@ tests.strictWorks = function() {
   assert(isError(err))
   assert('badParam' === err.code)
 }
-
 
 tests.arrayTypesPass = function() {
   var schema = {
@@ -273,6 +213,50 @@ tests.arrayBasicFailsProperly = function() {
   var err = chk(value, schema, options)
   assert(isError(err))
   assert('badType' === err.code)
+}
+
+tests.enumsWork = function() {
+  var schema = {s1: {type: 'string', value: 'foo|bar|baz'}}
+  var value = {s1: 'bar'}
+  var err = chk(value, schema)
+  if (err) throw err
+  var err = chk({s1: 'notfoo'}, schema)
+  assert(tipe.isError(err))
+  assert('badValue' === err.code)
+}
+
+tests.simpleFunctionValidatorsWork = function() {
+  var schema = {
+    type: 'string',
+    value: function(v) {
+      // true if first char is uppercase
+      return (v[0] && v[0] === v[0].toUpperCase())
+    }
+  }
+  var err = chk('Hello', schema)
+  assert(!err)
+  err = chk('hello', schema)
+  assert(isError(err))
+  assert('badValue' === err.code)
+}
+
+tests.complexFunctionValidatorsWork = function() {
+  var schema = {
+    n1: {type: 'number', required: true},
+    n2: {
+      type: 'number',
+      required: true,
+      value: function(v, obj) {
+        // true if n2 is > n1
+        return (v > obj.n1)
+      }
+    }
+  }
+  var err = chk({n1: 1, n2: 2}, schema)
+  assert(!err)
+  err = chk({n1: 2, n2: 1}, schema)
+  assert(isError(err))
+  assert('badValue' === err.code)
 }
 
 tests.schemasCanHaveExtraFields = function() {

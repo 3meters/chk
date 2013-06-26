@@ -12,8 +12,9 @@
  * Chk is not idempotent.  It may modify the passed-in value
  * via the defaults parameter of the schema, via type coersion,
  * or via arbitrary code in schema validator functions. Chk
- * never modifies the passed-in schema. Iterates for fields of
- * type array. Recurses for fields of type object.
+ * never modifies the passed-in schema. It iterates for fields
+ * of type array, and recurses for fields of type object.
+ *
  *
  * Copyright (c) 2013 3meters.  All rights reserved.
  *
@@ -267,11 +268,13 @@ function checkValue(value, schema, options) {
       if (options.untrusted) {
         return fail('badSchema', 'Function validators are not allowed', args)
       }
-      // Call the validator function. Validators must return null
-      // on success or an Error on failure. Perform cross-key
-      // validation using optional params object and key
-      var err = schema.value(value, options.rootValue, options.key)
-      if (err) return err
+      // Schema.value is a user-supplied validator function. Validators
+      // work the other way round from chk itself:  they return truthy on
+      // success, falsey on failure. Cross-key validation may be performed
+      // using the optional params value and key
+      if (!schema.value(value, options.rootValue, options.key)) {
+        return fail('badValue', options.key + ': ' + schema.value, args)
+      }
       break
 
     case 'string':
@@ -313,7 +316,7 @@ function coerce(value, schema) {
 }
 
 
-// Error helper to return the full context of the failure
+// Error helper
 function fail(code, msg, info) {
 
   var errCodeMap = {
