@@ -2,11 +2,13 @@
 
   Template-driven, schema-inspired javascript parameter checker
 
-## Install with nodejs
+## Install
 
-    npm install chk
+    
 
 ## Use
+
+Readme is tbd.  For now see test.js
 
 ```js
 ```
