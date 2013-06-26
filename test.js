@@ -230,7 +230,8 @@ tests.simpleFunctionValidatorsWork = function() {
     type: 'string',
     value: function(v) {
       // true if first char is uppercase
-      return (v[0] && v[0] === v[0].toUpperCase())
+      if (v[0] && v[0] === v[0].toUpperCase()) return null
+      else return new Error('Must be uppercase')
     }
   }
   var err = chk('Hello', schema)
@@ -247,8 +248,8 @@ tests.complexFunctionValidatorsWork = function() {
       type: 'number',
       required: true,
       value: function(v, obj) {
-        // true if n2 is > n1
-        return (v > obj.n1)
+        if (v > obj.n1) return null
+        else return new Error('n2 must be greater than n1')
       }
     }
   }

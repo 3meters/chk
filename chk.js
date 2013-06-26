@@ -30,6 +30,7 @@ var isBoolean = tipe.isBoolean
 var isNumber = tipe.isNumber
 var isString = tipe.isString
 var isObject = tipe.isObject
+var isError = tipe.isError
 
 
 // Main
@@ -269,11 +270,13 @@ function checkValue(value, schema, options) {
         return fail('badSchema', 'Function validators are not allowed', args)
       }
       // Schema.value is a user-supplied validator function. Validators
-      // work the other way round from chk itself:  they return truthy on
-      // success, falsey on failure. Cross-key validation may be performed
-      // using the optional params value and key
-      if (!schema.value(value, options.rootValue, options.key)) {
-        return fail('badValue', options.key + ': ' + schema.value, args)
+      // work like chk itself:  they return null on success or an error
+      // on failure. Cross-key validation may be performed/ using the
+      // optional params value and key
+      var err = schema.value(value, options.rootValue, options.key)
+      if (isError(err)) {
+        err.code = err.code || 'badValue'
+        return err
       }
       break
 
