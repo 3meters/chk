@@ -2,7 +2,7 @@
 
   Simple recursive javascript object checker
 
-  chk validates objects against simple schemas. It supports required and default values, string enums, nested objects and arrays, optional type coercion, custom functional validators, and optional rejection of unknown keys.  It is particularly well-suited for validating public-facing web services. Chk my modify the chked value if you tell it to. 
+  chk validates objects against simple schemas. It supports required and default values, string enums, nested objects and arrays, optional type coercion, custom functional validators, and optional rejection of unknown keys.  It is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to. 
    
 ## Install for nodejs
 
