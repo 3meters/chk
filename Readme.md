@@ -79,7 +79,7 @@ schema = {
     type: 'number'
     value: function(v, obj) { // obj is the entire value object
       if (v > obj.n1) return null
-      return new Errow('n1 must be greater than n2')
+      return new Errow('n2 must be greater than n1')
     }
   }
 }
@@ -94,15 +94,18 @@ schema = {
   s1: {type: 'string'}
   s2: {type: 'string', default: 'goodbye'}
 }
-val = {s1: 'hello'}
-err = chk(val, schema) // err is null
-console.log(val)       // {s1: 'hello', s2: 'goodbye'}
+val = {s1: 'hello'} 
+err = chk(val, schema)  // err is null
+console.log(val)        // {s1: 'hello', s2: 'goodbye'}
 ```
 ### Optionally attempt to coerce strings to numbers or booleans
 Handy for accepting numbers or booleans from query strings
 ```js
 schema = {n1: {type: 'number'}, b1: {type: 'boolean'}}
-err = chk({n1: '12', b2: 'true'}, schema) // err is null
+val = {n1: '12', b2: 'true'}
+err = chk(val, schema)  // err is null
+console.log(val)  // {n1: 12, b2: true}  // types have been cast from string to target type
+val = {n1: '12', b2: 'true'}
 err = chk({n1: '12', b2: 'true'}, schema, {doNotCoerce: true}) // coercion off, err is Error with code 'badType'
 ```
 ### Nested Objects
