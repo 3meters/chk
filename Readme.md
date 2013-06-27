@@ -12,7 +12,7 @@
 npm install chk
 ```
 
-## Use
+### Use
 Call chk passing in a value and a schema.  Chk returns null on success or the first error it encouters on failure.  
 
 ## Bare minium
