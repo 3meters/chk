@@ -141,7 +141,7 @@ function doCheck(value, schema, options) {
     return fail('missingParam', options.key, args)
   }
 
-  if (!isObject(value)) { // arrays?
+  if (!isObject(value)) {
     return checkValue(value, schema, options)
   }
 
@@ -230,17 +230,16 @@ function doCheck(value, schema, options) {
 // function, or via a recusive nested schema call
 function checkValue(value, schema, options) {
 
-  /*
-  log('\ncheckValue key: ' + options.key)
-  log('value:', value)
-  log('schema:', schema)
-  */
-
   var args = {
     value: value,
     schema: schema,
     options: options,
   }
+
+  /*
+  console.log('checkValue agrs')
+  console.log(util.inspect(args))
+  */
 
   if (!isObject(schema)) return null  // success
 
@@ -271,8 +270,8 @@ function checkValue(value, schema, options) {
       }
       // Schema.value is a user-supplied validator function. Validators
       // work like chk itself:  they return null on success or an error
-      // on failure. Cross-key validation may be performed/ using the
-      // optional params value and key
+      // on failure. Cross-key validation may be performed using the
+      // optional params rootValue and key
       var err = schema.value(value, options.rootValue, options.key)
       if (isError(err)) {
         err.code = err.code || 'badValue'
@@ -296,6 +295,7 @@ function checkValue(value, schema, options) {
     default:
       return fail('badType', schema.value, args)
   }
+
   return null // success
 }
 

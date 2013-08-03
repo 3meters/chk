@@ -1,6 +1,6 @@
 {
   "name": "chk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simple, recursive, javascript value checker",
   "homepage": "https://github.com/3meters/chk",
   "keywords": [ "parameter", "check", "checker", "schema" ],
