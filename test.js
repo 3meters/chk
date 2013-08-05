@@ -225,13 +225,29 @@ tests.enumsWork = function() {
   assert('badValue' === err.code)
 }
 
-tests.simpleFunctionValidatorsWork = function() {
+tests.functionValidatorsWork = function() {
   var schema = {
     type: 'string',
     value: function(v) {
       // true if first char is uppercase
       if (v[0] && v[0] === v[0].toUpperCase()) return null
       else return new Error('Must be uppercase')
+    }
+  }
+  var err = chk('Hello', schema)
+  assert(!err)
+  err = chk('hello', schema)
+  assert(isError(err))
+  assert('badValue' === err.code)
+}
+
+tests.functionValidatorsWorkWithNonErrorReturnCodes = function() {
+  var schema = {
+    type: 'string',
+    value: function(v) {
+      // true if first char is uppercase
+      if (v[0] && v[0] === v[0].toUpperCase()) return null
+      else return 'Must be uppercase'
     }
   }
   var err = chk('Hello', schema)
@@ -249,7 +265,7 @@ tests.complexFunctionValidatorsWork = function() {
       required: true,
       value: function(v, obj) {
         if (v > obj.n1) return null
-        else return new Error('n2 must be greater than n1')
+        else return 'n2 must be greater than n1'
       }
     }
   }

@@ -270,10 +270,11 @@ function checkValue(value, schema, options) {
       }
       // Schema.value is a user-supplied validator function. Validators
       // work like chk itself:  they return null on success or an error
-      // on failure. Cross-key validation may be performed using the
-      // optional params rootValue and key
+      // or other positive value on failure. Cross-key validation may be
+      // performed using the optional params rootValue and key
       var err = schema.value(value, options.rootValue, options.key)
-      if (isError(err)) {
+      if (err) {
+        if (!isError(err)) err = new Error(err)
         err.code = err.code || 'badValue'
         return err
       }
