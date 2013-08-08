@@ -74,6 +74,10 @@ tests.bigSuccedes = function() {
   assert('hi' === value.o1.s2)
   assert(1 === value.o1.n2)
   assert(0 === value.o1.n3)
+  value.a2.push({s2: 'I should fail'})
+  err = chk(value, schema)
+  assert(err)
+  assert('missingParam' === err.code)
 }
 
 tests.coerceStrings = function() {
@@ -154,6 +158,30 @@ tests.missingRequiredNested = function() {
     s1: 'foo',
     o1: {s2: 'I am not nested s1'}
   }
+  var err = chk(value, schema)
+  assert(isError(err))
+  assert('missingParam' === err.code)
+}
+
+tests.topLevelArrays = function() {
+
+  return
+  var schema = {type: 'array', value: {
+    type: 'object', value: {
+      n1: {type: 'number', required: true},
+      s1: {type: 'string', default: 'foo'}
+    }
+  }}
+
+  var value = [{n1: 1}, {n1: 2}]
+  var err = chk(value, schema)
+  console.log(err)
+  console.log(value)
+  assert(!err)
+  assert('foo' === value[0].s1)
+  assert('foo' === value[1].s1)
+
+  value = [{n1: 1}, {s1: 'bar'}]
   var err = chk(value, schema)
   assert(isError(err))
   assert('missingParam' === err.code)
@@ -299,7 +327,7 @@ tests.schemasCannotMistypeSchemaFields = function() {
 // Run tests
 console.log('\nchk tests\n==========')
 for (var test in tests) {
-  tests[test]()
   console.log(test)
+  tests[test]()
 }
 console.log('\nchk tests pass')

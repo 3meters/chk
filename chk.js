@@ -31,6 +31,7 @@ var isNumber = tipe.isNumber
 var isString = tipe.isString
 var isObject = tipe.isObject
 var isError = tipe.isError
+var isScalar = tipe.isScalar
 
 
 // Main
@@ -112,20 +113,9 @@ function doCheck(value, schema, options) {
   var err = null
   options = options || {}
   options.key = options.key || ''
-  var args = {
-    value: value,
-    schema: schema,
-    options: options
-  }
+  var args = {value: value, schema: schema, options: options}
 
   if (!isObject(schema)) return null  // success
-
-  // Schema is nested one level
-  if (isObject(value)
-      && 'object' === schema.type
-      && isObject(schema.value)) {
-    schema = schema.value
-  }
 
   // Set defaults
   if (!options.ignoreDefaults
@@ -141,37 +131,38 @@ function doCheck(value, schema, options) {
     return fail('missingParam', options.key, args)
   }
 
-  if (!isObject(value)) {
-    return checkValue(value, schema, options)
+  // Schema is nested one level
+  if (isObject(value)
+      && 'object' === schema.type
+      && isObject(schema.value)) {
+    // schema = schema.value
+    err = doCheck(value, schema.value, options)
+    if (err) return err
+    return
   }
 
+  if (isScalar(value)) {
+    return checkScalar(value, schema, options)
+  }
 
-  // Fail on unrecognized keys
-  // Schema local option overrides global option
-  var beStrict = (isUndefined(schema.strict))
-    ? isBoolean(options.strict) && options.strict
-    : isBoolean(schema.strict) && schema.strict
-  if (beStrict) {
-    for (var key in value) {
-      if (!schema[key]) {
-        return fail('badParam', key, args)
+  // Strict mode checks for unrecognized keys
+  if (isObject(value)) {
+    // Schema local option overrides global option
+    var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
+    if (beStrict) {
+      for (var key in value) {
+        if (!schema[key]) return fail('badParam', key, args)
       }
     }
   }
 
+  // Set defaults and check required
   for (var key in schema) {
-
-    // skip schema attributes
-    if (!schema[key].type) continue
-
-    // Set defaults
     if (!options.ignoreDefaults
         && !isUndefined(schema[key].default)
         && isUndefined(value[key])) { // null is not overridden
-      value[key] = schema[key].default
+      value[key] = clone(schema[key].default)
     }
-
-    // Check required
     if (!options.ignoreRequired &&
         schema[key].required &&
         (isUndefined(value[key]) || isNull(value[key]))) {
@@ -212,12 +203,12 @@ function doCheck(value, schema, options) {
       case 'string':
         // Coerce stings to numbers and booleans
         if (!options.doNotCoerce && schema[key]) {
-          value[key] = coerce(value[key], schema[key])
-        }
+           value[key] = coerce(value[key], schema[key])
+         }
         // fall through to default on purpose
 
       default:
-        err = checkValue(value[key], schema[key], options)
+        err = checkScalar(value[key], schema[key], options)
         if (err) return err
     }
   }
@@ -226,30 +217,20 @@ function doCheck(value, schema, options) {
 }
 
 
-// Check value against a simple rule, a specified validator
+// Check a scalar value against a simple rule, a specified validator
 // function, or via a recusive nested schema call
-function checkValue(value, schema, options) {
+function checkScalar(value, schema, options) {
 
-  var args = {
-    value: value,
-    schema: schema,
-    options: options,
-  }
+  var args = {value: value, schema: schema, options: options}
 
   /*
-  console.log('checkValue agrs')
+  console.log('checkScalar agrs')
   console.log(util.inspect(args))
   */
 
   if (!isObject(schema)) return null  // success
 
   if (isNull(value) || isUndefined(value)) return null // success
-
-  // Set defaults
-  if (!options.ignoreDefaults &&
-      schema.default && isUndefined(value)) { // null is not overridden
-    value = clone(schema.default)
-  }
 
   // Check type, matching |-delimited target, i.e. 'string|number|boolean'
   if (schema.type && !isUndefined(value) && !isNull(value) &&
@@ -331,8 +312,8 @@ function fail(code, msg, info) {
     badSchema: 'Invalid Schema',
   }
 
-  if (isObject(msg)) msg = util.inspect(msg)
-  if (isObject(info)) msg += '\n' + util.inspect(info)
+  if (isObject(msg)) msg = util.inspect(msg, false, 10)
+  if (isObject(info)) msg += '\n' + util.inspect(info, false, 10)
   var err = new Error(errCodeMap[code] + ': ' + msg)
   err.code = code
   return err
@@ -348,8 +329,23 @@ function match(str, strEnum) {
 }
 
 
+// Iterate over the keys of an object or the elements of an array
+function each(obj, fn) {
+  if (isArray(obj)) {
+    obj.forEach(fn)
+  }
+  else if (isObject(obj)) {
+    for (var k in obj) {
+      fn(obj[k])
+    }
+  }
+  else fn(obj)
+}
+
+
 // Returns null for objects that JSON can't serialize
 function clone(obj) {
+  if (isScalar(obj)) return obj
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
   catch(e) { return null }
   return clonedObj
