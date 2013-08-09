@@ -43,8 +43,11 @@ var log = function(s, o) {
 function chk(value, schema, options) {
 
   // Check the schema
-  var schemaErr = doCheck(schema, _schema)
-  if (isError(schemaErr)) return schemaErr
+  var err = doCheck(schema, _schema)
+  if (isError(err)) {
+    err.code = 'badSchema'
+    return err
+  }
 
   // Configure options
   options = options || {}
@@ -59,41 +62,6 @@ function chk(value, schema, options) {
   // Do the work
   value = doCheck(value, schema, options)
   return (isError(value)) ? value : null
-}
-
-
-// Validate the user-provided schema against the meta schema
-function checkSchema(schema) {
-
-  return null
-
-  var err = check(schema, _schema)
-
-  if (!isObject(schema)) {
-    return fail('badType', 'Schema object is required')
-  }
-
-  // Schema may target scalars or objects, figure out which
-  var targetIsScalar = true
-  for (var key in schema) {
-    if (!_schema[key]) {
-      targetIsScalar = false
-      break
-    }
-  }
-
-  if (targetIsScalar) {
-    err = doCheck(schema, _schema)
-  }
-  else {
-    for (var key in schema) {
-      err = doCheck(schema[key], _schema)
-      if (err) break
-    }
-  }
-
-  if (err) return fail('badSchema', err.message)
-  return null // success
 }
 
 
@@ -149,27 +117,33 @@ function doCheck(value, schema, options) {
           if (!schema[key]) return fail('badParam', key, args)
         }
       }
+      // Schema fields may be nested inside an object
+      var fields = ('object' === schema.type && isObject(schema.value))
+        ? schema.value
+        : schema
+      log('Schema fields', fields)
+
       // Set defaults and check for missing required properties
-      for (var key in schema) {
+      for (var key in fields) {
         if (!options.ignoreDefaults
-            && isDefined(schema[key].default)
+            && isDefined(fields[key].default)
             && isUndefined(value[key])) {
-          value[key] = clone(schema[key].default)
+          value[key] = clone(fields[key].default)
         }
         if (!options.ignoreRequired
-            && schema[key].required
+            && fields[key].required
             && (isUndefined(value[key]) || isNull(value[key]))) {
           return fail('missingParam', key, args)
         }
       }
       // Check the value's properties
       for (var key in value) {
-        if (schema[key]) {
+        if (fields[key]) {
           options.key = key
-          // Schema may be expressed as a nested object
-          var subSchema = (isObject(schema[key].value) && 'object' === schema[key].type)
-            ? schema[key].value
-            : schema[key]
+          // SubSchema may be expressed as a nested object
+          var subSchema = (isObject(fields[key].value) && 'object' === fields[key].type)
+            ? fields[key].value
+            : fields[key]
           value[key] = doCheck(value[key], subSchema, options)  // recurse
           if (isError(value[key])) {
             err = value[key]

@@ -13,19 +13,25 @@ var chk = require('./chk')
 var tests = {}
 var log = console.log
 
+tests.schemasCannotMistypeSchemaFields = function() {
+  var schema = {
+    s1: {type: 1}  // the type of schema type fields must be string
+  }
+  var val = {n1: 1}
+  var err = chk(val, schema)
+  assert(isError(err))
+  assert('badSchema' === err.code)
+}
 
 tests.failsProperlyOnEmpty = function() {
-  return
   var err = chk()
   assert(isError(err))
-  assert('missingParam' === err.code)
+  assert('badSchema' === err.code)
 }
 
 tests.minimalWorks = function() {
   var schema = {type: 'number', required: true}
   var err = chk(1, schema)
-  log('TTTTest err')
-  log(err)
   assert(isNull(err))
   err = chk('foo', schema)
   assert(isError(err))
