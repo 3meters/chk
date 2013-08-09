@@ -5,6 +5,7 @@
  */
 
 var assert = require('assert')
+var util = require('util')
 var tipe = require('tipe')    // type checker -- https://github.com:3meters/tipe
 var isError = tipe.isError
 var isNull = tipe.isNull
@@ -23,6 +24,8 @@ tests.failsProperlyOnEmpty = function() {
 tests.minimalWorks = function() {
   var schema = {type: 'number', required: true}
   var err = chk(1, schema)
+  log('TTTTest err')
+  log(err)
   assert(isNull(err))
   err = chk('foo', schema)
   assert(isError(err))

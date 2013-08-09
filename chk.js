@@ -42,9 +42,9 @@ var log = function(s, o) {
 // Main
 function chk(value, schema, options) {
 
-  // Make sure the schema is valid
-  var err = checkSchema(schema)
-  if (err) return err
+  // Check the schema
+  var schemaErr = doCheck(schema, _schema)
+  if (isError(schemaErr)) return schemaErr
 
   // Configure options
   options = options || {}
@@ -57,22 +57,20 @@ function chk(value, schema, options) {
   options.rootSchema = schema
 
   // Do the work
-  return doCheck(value, schema, options)
+  value = doCheck(value, schema, options)
+  return (isError(value)) ? value : null
 }
 
 
 // Validate the user-provided schema against the meta schema
 function checkSchema(schema) {
+
   return null
 
-  var err
-
-  if (isUndefined(schema)) {
-    return fail('missingParam', 'Schema is required')
-  }
+  var err = check(schema, _schema)
 
   if (!isObject(schema)) {
-    return fail('badType', 'Schema must be an object')
+    return fail('badType', 'Schema object is required')
   }
 
   // Schema may target scalars or objects, figure out which
@@ -99,14 +97,13 @@ function checkSchema(schema) {
 }
 
 
-// Meta schema for chk schemas
-var _schema = {
+// Meta schema
+var _schema = {type: 'object', required: true, value: {
   type:     { type: 'string' },
   required: { type: 'boolean' },
-  default:  { },
   value:    { type: 'string|number|boolean|object|function' },
   strict:   { type: 'boolean' },
-}
+}}
 
 
 // Check all schema attributes except value
@@ -114,12 +111,13 @@ var _schema = {
 // Value can be an object or a scalar
 function doCheck(value, schema, options) {
 
-  var err, key = null
   options = options || {}
   options.key = options.key || ''
   var args = {value: value, schema: schema, options: options}
   delete args.options
-  // log('args:', args)
+  log('doCheck args:', args)
+
+  var err = null
 
   if (!isObject(schema)) return null  // success
 
@@ -137,25 +135,22 @@ function doCheck(value, schema, options) {
     return fail('missingParam', options.key, args)
   }
 
-  // Check type
-  if (schema.type && !match(tipe(value), schema.type)) {
-    return fail('badType', args)
-  }
-
   switch (tipe(value)) {
 
     case 'object':
+      // Check type
+      if (schema.type && !match('object', schema.type)) {
+        return fail('badType', args)
+      }
       // In strict mode check for unrecognized keys
       var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
       if (beStrict) {
-        for (key in value) {
+        for (var key in value) {
           if (!schema[key]) return fail('badParam', key, args)
         }
       }
       // Set defaults and check for missing required properties
-      for (key in schema) {
-        log('schema[key]:', schema[key])
-        log('value[key]:', value[key])
+      for (var key in schema) {
         if (!options.ignoreDefaults
             && isDefined(schema[key].default)
             && isUndefined(value[key])) {
@@ -167,31 +162,36 @@ function doCheck(value, schema, options) {
           return fail('missingParam', key, args)
         }
       }
-      // Recursively check the value's properties
-      for (key in value) {
+      // Check the value's properties
+      for (var key in value) {
         if (schema[key]) {
           options.key = key
-          // schema may be expressed as a nested object
+          // Schema may be expressed as a nested object
           var subSchema = (isObject(schema[key].value) && 'object' === schema[key].type)
             ? schema[key].value
             : schema[key]
-          // log('debug key', key)
-          // log('schema[key]', schema[key])
-          // log('subSchema', subSchema)
-          err = doCheck(value[key], subSchema, options) // recurse
+          value[key] = doCheck(value[key], subSchema, options)  // recurse
+          if (isError(value[key])) {
+            err = value[key]
+            break
+          }
         }
       }
       break
 
     case 'array':
+      // Check type
+      if (schema.type && !match('array', schema.type)) {
+        return fail('badType', args)
+      }
       if (schema.value) {
-        // schema may be expressed as a nested object
+        // Schema may be expressed as a nested object
         var subSchema = (isObject(schema.value.value) && 'object' === schema.value.type)
           ? schema.value.value
           : schema.value
         value.forEach(function(elm) {
-          err = doCheck(elm, subSchema, options)
-          if (err) return
+          elm = doCheck(elm, subSchema, options)  // iterate
+          if (isError(elm)) return err = elm
         })
       }
       break
@@ -200,7 +200,8 @@ function doCheck(value, schema, options) {
       value = checkScalar(value, schema, options)
       if (isError(value)) err = value
   }
-  return (isError(err)) ? err : null
+  // if (isError(err)) log('returning Error: ', err)
+  return (isError(err)) ? err : value
 }
 
 /*
@@ -280,17 +281,15 @@ function checkScalar(value, schema, options) {
 
   var args = {value: value, schema: schema, options: options}
 
-  /*
-  console.log('checkScalar agrs')
-  console.log(util.inspect(args))
-  */
+  delete args.options
+  // log('checkScalar args:', args)
 
   if (!isObject(schema)) return value  // success
 
   if (isNull(value) || isUndefined(value)) return value // success
 
   if (isString(value) && !options.doNotCoerce) {
-     value = coerce(value, schema)
+    value = coerce(value, schema)
   }
 
   // Check type, matching |-delimited target, i.e. 'string|number|boolean'
