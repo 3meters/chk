@@ -33,6 +33,11 @@ var isString = tipe.isString
 var isObject = tipe.isObject
 var isError = tipe.isError
 var isScalar = tipe.isScalar
+var log = function(s, o) {
+  if (o) s+= '\n' + util.inspect(o, false, 10)
+  console.log(s)
+}
+
 
 // Main
 function chk(value, schema, options) {
@@ -71,22 +76,31 @@ function doCheck(value, schema, options) {
   var err = null
   options = options || {}
   var args = {value: value, schema: schema, options: options}
+  // log('doCheck args:', args)
 
   if (!isObject(schema)) return value  // success
 
+  // log('val2:', value)
   // First check the schema
   if (!options.schemaOk) {
+    // log('checking schema')
     err = checkObject(schema, _schema, {schemaOk: true})
+    // log('checking schema returned')
     if (isError(err)) {
       err.code = 'badSchema'
+      // log('schema failed check')
       return err
+      // log('I should never run')
     }
+    // log('schema check succeded')
   }
 
+  // log('val3', value)
   // Set defaults
   if (!options.ignoreDefaults
       && isDefined(schema.default)
       && isUndefined(value)) { // null is not overridden
+    // log('setting default to ', schema.default)
     value = clone(schema.default)
   }
 
@@ -97,15 +111,19 @@ function doCheck(value, schema, options) {
     return fail('missingParam', options.key, args)
   }
 
+  log('value before check', value)
   switch (tipe(value)) {
     case 'object':
       value = checkObject(value, schema, options)
+      // log('value after checkObject', value)
       break
     case 'array':
       value = checkArray(value, schema, options)
+      log('value after checkArray', value)
       break
     default:
       value = checkScalar(value, schema, options)
+      // log('value after checkScalar', value)
   }
 
   return value
@@ -129,6 +147,7 @@ function checkObject(value, schema, options) {
   var fields = ('object' === schema.type && isObject(schema.value))
     ? schema.value
     : schema
+  // log('Schema fields', fields)
 
   // Set defaults and check for missing required properties
   for (var key in fields) {
@@ -151,8 +170,10 @@ function checkObject(value, schema, options) {
       var subSchema = (isObject(fields[key].value) && 'object' === fields[key].type)
         ? fields[key].value
         : fields[key]
+      // log('object subSchema:', subSchema)
       value[key] = doCheck(value[key], subSchema, options)  // recurse
       if (isError(value[key])) {
+        // log('I am dying from an object failure')
         return value[key]
       }
     }
@@ -169,27 +190,33 @@ function checkArray(value, schema, options) {
   if (isString(schema.type) && !match('array', schema.type)) {
     return fail('badType', args)
   }
+  // log('array schema', schema)
   if (schema.value) {
     // Schema may be expressed as a nested object
     var subSchema = ('object' === schema.value.type && isObject(schema.value.value))
       ? schema.value.value
       : schema.value
+    // log('array subSchema', subSchema)
     err = checkObject(subSchema, _schema, {schemaOk: true})
     if (isError(err)) {
       err.code = 'badSchema'
       return err
     }
     options.schemaOk = true
+    var i = 0
     value.forEach(function(elm) {
+      i++
+      // log('checking elm ' + i)
       elm = doCheck(elm, subSchema, options)  // iterate
       if (isError(elm)) {
         err = elm
+        // log('I am dying from an array failure')
         return // forEach
       }
     })
     options.schemaOk = false
   }
-  return (isError(err)) ? err : value
+  return (err) ? err : value
 }
 
 
@@ -201,6 +228,7 @@ function checkScalar(value, schema, options) {
   var args = {value: value, schema: schema, options: options}
 
   delete args.options
+  // log('checkScalar args:', args)
 
   if (!isObject(schema)) return value  // success
 
@@ -256,6 +284,7 @@ function checkScalar(value, schema, options) {
       return fail('badType', schema.value, args)
   }
 
+  // log('scalar check passed and returned ' + value)
   return value // success
 }
 
@@ -313,13 +342,6 @@ function clone(obj) {
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
   catch(e) { return null }
   return clonedObj
-}
-
-
-// Debugging helper
-var log = function(s, o) {
-  if (o) s+= '\n' + util.inspect(o, false, 10)
-  console.log(s)
 }
 
 

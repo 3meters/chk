@@ -11,7 +11,11 @@ var isError = tipe.isError
 var isNull = tipe.isNull
 var chk = require('./chk')
 var tests = {}
-var log = console.log
+var _tests = {}
+var log = function(s, o) {
+  if (o) s+= '\n' + util.inspect(o, false, 10)
+  console.log(s)
+}
 
 
 tests.succeedsOnEmpty = function() {
@@ -37,7 +41,7 @@ tests.basicArray = function() {
   var val = []
   var err = chk(val, schema)
   assert(isNull(err))
-  val = ['foo', 'bar', 'buzz']
+  val = ['foo', 'bar', 'baz']
   err = chk(val, schema)
   assert(isNull(err))
   val.push(1)
@@ -45,7 +49,6 @@ tests.basicArray = function() {
   assert(isError(err))
   assert('badType' === err.code)
 }
-
 
 tests.bigSuccedes = function() {
   var schema = {
@@ -190,7 +193,6 @@ tests.missingRequiredNested = function() {
 }
 
 tests.topLevelArrays = function() {
-  return
 
   var schema = {type: 'array', value: {
     type: 'object', value: {
@@ -337,16 +339,15 @@ tests.schemasCanHaveExtraFields = function() {
   if (err) throw err
 }
 
-tests.schemasCannotMistypeSchemaFields = function() {
+var t = tests.schemasCannotMistypeSchemaFields = function() {
   var schema = {
-    s1: {type: 1}  // the type of schema type fields must be string
+    n1: {type: 1}  // the type of schema type fields must be string
   }
   var val = {n1: 1}
   var err = chk(val, schema)
   assert(isError(err))
   assert('badSchema' === err.code)
 }
-
 
 // Run tests
 console.log('\nchk tests\n==========')
