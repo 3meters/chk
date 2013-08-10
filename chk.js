@@ -42,13 +42,6 @@ var log = function(s, o) {
 // Main
 function chk(value, schema, options) {
 
-  // Check the schema
-  var err = doCheck(schema, _schema)
-  if (isError(err)) {
-    err.code = 'badSchema'
-    return err
-  }
-
   // Configure options
   options = options || {}
   options.strict = options.strict || false  // allow non-specified fields
@@ -58,6 +51,7 @@ function chk(value, schema, options) {
   options.untrusted = options.untrusted || false
   options.rootValue = value
   options.rootSchema = schema
+  options.schemaOk = false
 
   // Do the work
   value = doCheck(value, schema, options)
@@ -66,12 +60,13 @@ function chk(value, schema, options) {
 
 
 // Meta schema
-var _schema = {type: 'object', required: true, value: {
+var _schema = {
   type:     { type: 'string' },
   required: { type: 'boolean' },
   value:    { type: 'string|number|boolean|object|function' },
   strict:   { type: 'boolean' },
-}}
+  validate: { type: 'funciton' },
+}
 
 
 // Check all schema attributes except value
@@ -79,20 +74,34 @@ var _schema = {type: 'object', required: true, value: {
 // Value can be an object or a scalar
 function doCheck(value, schema, options) {
 
-  options = options || {}
-  options.key = options.key || ''
-  var args = {value: value, schema: schema, options: options}
-  delete args.options
-  log('doCheck args:', args)
-
   var err = null
+  options = options || {}
+  var args = {value: value, schema: schema, options: options}
+  log('doCheck args:', args)
 
   if (!isObject(schema)) return null  // success
 
+  log('val2:', value)
+  // First check the schema
+  if (!options.schemaOk) {
+    log('checking schema')
+    err = checkObject(schema, _schema, {schemaOk: true})
+    log('checking schema returned')
+    if (isError(err)) {
+      err.code = 'badSchema'
+      log('schema failed check')
+      return err
+      log('I should never run')
+    }
+    log('schema check succeded')
+  }
+
+  log('val3', value)
   // Set defaults
   if (!options.ignoreDefaults
       && isDefined(schema.default)
       && isUndefined(value)) { // null is not overridden
+    log('setting default to ', schema.default)
     value = clone(schema.default)
   }
 
@@ -104,149 +113,109 @@ function doCheck(value, schema, options) {
   }
 
   switch (tipe(value)) {
-
     case 'object':
-      // Check type
-      if (schema.type && !match('object', schema.type)) {
-        return fail('badType', args)
-      }
-      // In strict mode check for unrecognized keys
-      var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
-      if (beStrict) {
-        for (var key in value) {
-          if (!schema[key]) return fail('badParam', key, args)
-        }
-      }
-      // Schema fields may be nested inside an object
-      var fields = ('object' === schema.type && isObject(schema.value))
-        ? schema.value
-        : schema
-      log('Schema fields', fields)
-
-      // Set defaults and check for missing required properties
-      for (var key in fields) {
-        if (!options.ignoreDefaults
-            && isDefined(fields[key].default)
-            && isUndefined(value[key])) {
-          value[key] = clone(fields[key].default)
-        }
-        if (!options.ignoreRequired
-            && fields[key].required
-            && (isUndefined(value[key]) || isNull(value[key]))) {
-          return fail('missingParam', key, args)
-        }
-      }
-      // Check the value's properties
-      for (var key in value) {
-        if (fields[key]) {
-          options.key = key
-          // SubSchema may be expressed as a nested object
-          var subSchema = (isObject(fields[key].value) && 'object' === fields[key].type)
-            ? fields[key].value
-            : fields[key]
-          value[key] = doCheck(value[key], subSchema, options)  // recurse
-          if (isError(value[key])) {
-            err = value[key]
-            break
-          }
-        }
-      }
+      value = checkObject(value, schema, options)
       break
-
     case 'array':
-      // Check type
-      if (schema.type && !match('array', schema.type)) {
-        return fail('badType', args)
-      }
-      if (schema.value) {
-        // Schema may be expressed as a nested object
-        var subSchema = (isObject(schema.value.value) && 'object' === schema.value.type)
-          ? schema.value.value
-          : schema.value
-        value.forEach(function(elm) {
-          elm = doCheck(elm, subSchema, options)  // iterate
-          if (isError(elm)) return err = elm
-        })
-      }
+      value = checkArray(value, schema, options)
       break
-
     default:
       value = checkScalar(value, schema, options)
-      if (isError(value)) err = value
   }
-  // if (isError(err)) log('returning Error: ', err)
-  return (isError(err)) ? err : value
+
+  return value
 }
 
-/*
-  // Schema is nested one level
-  if (isObject(value)
-      && 'object' === schema.type
-      && isObject(schema.value)) {
-    // schema = schema.value
-    err = doCheck(value, schema.value, options)
-    if (err) return err
-    return
+// Check an object
+function checkObject(value, schema, options) {
+  var args = {value: value, schema: schema, options: options}
+  // Check type
+  if (isString(schema.type) && !match('object', schema.type)) {
+    return fail('badType', args)
   }
-
-  // Strict mode checks for unrecognized keys
-  if (isObject(value)) {
-    
-  }
-
-  // Set defaults and check required
-  for (var key in schema) {
-    if (!options.ignoreDefaults
-        && !isUndefined(schema[key].default)
-        && isUndefined(value[key])) { // null is not overridden
-      value[key] = clone(schema[key].default)
+  // In strict mode check for unrecognized keys
+  var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
+  if (beStrict) {
+    for (var key in value) {
+      if (!schema[key]) return fail('badParam', key, args)
     }
-    if (!options.ignoreRequired &&
-        schema[key].required &&
-        (isUndefined(value[key]) || isNull(value[key]))) {
+  }
+  // Schema fields may be nested inside an object
+  var fields = ('object' === schema.type && isObject(schema.value))
+    ? schema.value
+    : schema
+  // log('Schema fields', fields)
+
+  // Set defaults and check for missing required properties
+  for (var key in fields) {
+    if (!options.ignoreDefaults
+        && isDefined(fields[key].default)
+        && isUndefined(value[key])) {
+      value[key] = clone(fields[key].default)
+    }
+    if (!options.ignoreRequired
+        && fields[key].required
+        && (isUndefined(value[key]) || isNull(value[key]))) {
       return fail('missingParam', key, args)
     }
   }
-
-
-  // Check elements
+  // Check the value's properties
   for (var key in value) {
-    options.key = key
-
-    if (schema[key] && !schema[key].type) continue  // schema[key] is empty, move on
-
-    switch(tipe(value[key])) {
-
-      case 'object':
-        if (schema[key] && schema[key].value) {
-          err = doCheck(value[key], schema[key].value, options) // recurse
-          if (err) return err
-        }
-        break
-
-      case 'array':
-        if (!schema[key]) break
-        if (!match('array', schema[key].type)) {
-          return fail('badType', 'Value may not be an array', args)
-        }
-        if (schema[key].value) {
-          value[key].forEach(function(elm) {
-            err = doCheck(elm, schema[key].value, options)
-            if (err) return
-          })
-          if (err) return err
-        }
-        break
-
-      default:
-        value[key] = checkScalar(value[key], schema[key], options)
-        if (isError(value[key])) return err = value[key]
+    if (fields[key]) {
+      options.key = key
+      // SubSchema may be expressed as a nested object
+      var subSchema = (isObject(fields[key].value) && 'object' === fields[key].type)
+        ? fields[key].value
+        : fields[key]
+      log('object subSchema:', subSchema)
+      value[key] = doCheck(value[key], subSchema, options)  // recurse
+      if (isError(value[key])) {
+        log('I am dying from an object failure')
+        return value[key]
+      }
     }
   }
-
-  return err
+  return value
 }
-*/
+
+
+// Check an array
+function checkArray(value, schema, options) {
+  var err = null
+  var args = {value: value, schema: schema, options: options}
+  // Check type
+  if (isString(schema.type) && !match('array', schema.type)) {
+    return fail('badType', args)
+  }
+  log('array schema', schema)
+  if (schema.value) {
+    // Schema may be expressed as a nested object
+    var subSchema = ('object' === schema.value.type && isObject(schema.value.value))
+      ? schema.value.value
+      : schema.value
+    log('array subSchema', subSchema)
+    err = checkObject(subSchema, _schema, {schemaOk: true})
+    if (isError(err)) {
+      err.code = 'badSchema'
+      return err
+    }
+    options.schemaOk = true
+    var i = 0
+    value.forEach(function(elm) {
+      i++
+      log('checking elm ' + i)
+      elm = doCheck(elm, subSchema, options)  // iterate
+      if (isError(elm)) {
+        err = elm
+        log('I am dying from an array failure')
+        return // forEach
+      }
+    })
+    options.schemaOk = false
+  }
+  return (err) ? err : value
+}
+
 
 // Check a scalar value against a simple rule, a specified validator
 // function, or via a recusive nested schema call
@@ -256,7 +225,7 @@ function checkScalar(value, schema, options) {
   var args = {value: value, schema: schema, options: options}
 
   delete args.options
-  // log('checkScalar args:', args)
+  log('checkScalar args:', args)
 
   if (!isObject(schema)) return value  // success
 
@@ -267,7 +236,7 @@ function checkScalar(value, schema, options) {
   }
 
   // Check type, matching |-delimited target, i.e. 'string|number|boolean'
-  if (schema.type && isDefined(value) && !isNull(value) &&
+  if (isString(schema.type) && isDefined(value) && !isNull(value) &&
       !match(tipe(value), schema.type)) {
     return fail('badType', options.key + ': ' + schema.type, args)
   }
@@ -312,6 +281,7 @@ function checkScalar(value, schema, options) {
       return fail('badType', schema.value, args)
   }
 
+  log('scalar check passed and returned ' + value)
   return value // success
 }
 

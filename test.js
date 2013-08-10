@@ -13,20 +13,14 @@ var chk = require('./chk')
 var tests = {}
 var log = console.log
 
-tests.schemasCannotMistypeSchemaFields = function() {
-  var schema = {
-    s1: {type: 1}  // the type of schema type fields must be string
-  }
-  var val = {n1: 1}
-  var err = chk(val, schema)
-  assert(isError(err))
-  assert('badSchema' === err.code)
-}
 
-tests.failsProperlyOnEmpty = function() {
+tests.succeedsOnEmpty = function() {
   var err = chk()
-  assert(isError(err))
-  assert('badSchema' === err.code)
+  assert(isNull(err))
+  err = chk(1)
+  assert(isNull(err))
+  err = chk({})
+  assert(isNull(err))
 }
 
 tests.minimalWorks = function() {
@@ -37,6 +31,21 @@ tests.minimalWorks = function() {
   assert(isError(err))
   assert('badType' === err.code)
 }
+
+tests.basicArray = function() {
+  var schema = {type: 'array', value: {type: 'string'}}
+  var val = []
+  var err = chk(val, schema)
+  assert(isNull(err))
+  val = ['foo', 'bar', 'buzz']
+  err = chk(val, schema)
+  assert(isNull(err))
+  val.push(1)
+  err = chk(val, schema)
+  assert(isError(err))
+  assert('badType' === err.code)
+}
+
 
 tests.bigSuccedes = function() {
   var schema = {
@@ -66,6 +75,7 @@ tests.bigSuccedes = function() {
     a1: {type: 'array', value: {type: 'string'}},
     a2: {type: 'array', value: {type: 'object', value: {
             s1: {type: 'string', required: true},
+            s2: {type: 'string', default: 'hello'},
         }}
     },
   }
@@ -85,6 +95,11 @@ tests.bigSuccedes = function() {
   assert('hi' === value.o1.s2)
   assert(1 === value.o1.n2)
   assert(0 === value.o1.n3)
+  assert(4 === value.a2.length)
+  value.a2.forEach(function(elm) {
+    assert(tipe.isString(elm.s1))
+    assert('hello' === elm.s2)
+  })
   value.a2.push({s2: 'I should fail'})
   err = chk(value, schema)
   assert(err)
@@ -186,8 +201,6 @@ tests.topLevelArrays = function() {
 
   var value = [{n1: 1}, {n1: 2}]
   var err = chk(value, schema)
-  console.log(err)
-  console.log(value)
   assert(!err)
   assert('foo' === value[0].s1)
   assert('foo' === value[1].s1)
