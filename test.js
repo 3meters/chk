@@ -13,24 +13,22 @@ var chk = require('./chk')
 var tests = {}
 var _tests = {}
 var log = function(s, o) {
-  if (o) s+= '\n' + util.inspect(o, false, 10)
-  console.log(s)
+  console.log(s += (o) ? '\n' + util.inspect(o, false, 10) : '')
 }
 
-
-tests.succeedsOnEmpty = function() {
-  var err = chk()
-  assert(isNull(err))
-  err = chk(1)
-  assert(isNull(err))
-  err = chk({})
-  assert(isNull(err))
+tests.failsOnNonObjectSchema = function() {
+  var err = chk(1)
+  assert(isError(err))
+  assert('badSchema' === err.code)
+  err = chk(1,1)
+  assert(isError(err))
+  assert('badSchema' === err.code)
 }
 
 tests.minimalWorks = function() {
   var schema = {type: 'number', required: true}
   var err = chk(1, schema)
-  assert(isNull(err))
+  assert(isNull(err), (err && err.stack) ? err.stack : '')
   err = chk('foo', schema)
   assert(isError(err))
   assert('badType' === err.code)
@@ -349,6 +347,7 @@ var t = tests.schemasCannotMistypeSchemaFields = function() {
   assert('badSchema' === err.code)
 }
 
+// t()
 // Run tests
 console.log('\nchk tests\n==========')
 for (var test in tests) {

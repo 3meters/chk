@@ -37,6 +37,9 @@ var isScalar = tipe.isScalar
 // Main
 function chk(value, schema, options) {
 
+  var schemaErr = checkSchema(schema)
+  if (schemaErr) return schemaErr
+
   // Configure options
   options = options || {}
   options.strict = options.strict || false  // allow non-specified fields
@@ -54,13 +57,40 @@ function chk(value, schema, options) {
 }
 
 
-// Meta schema
-var _schema = {
-  type:     { type: 'string' },
-  required: { type: 'boolean' },
-  value:    { type: 'string|number|boolean|object|function' },
-  strict:   { type: 'boolean' },
-  validate: { type: 'function' },
+// Validate the schema
+function checkSchema(schema) {
+
+  if (!isObject(schema)) return fail('badSchema')
+
+  return null
+  var err = null
+
+  var _schema = {
+    type:     { type: 'string' },
+    required: { type: 'boolean' },
+    value:    { type: 'string|number|boolean|object|function' },
+    strict:   { type: 'boolean' },
+    validate: { type: 'function' },
+  }
+
+  // Recursively check nested schemas
+  if ('object' === schema.type && isObject(schema.value)) {
+    err = checkSchema(schema.value)
+    if (isError(err)) return err
+  }
+  else {
+    for (var key in schema) {
+      err = doCheck(schema[key], _schema)
+      if (isError(err)) break
+    }
+  }
+
+  if (isError(err)) {
+    err.code = 'badSchema'
+    return err
+  }
+
+  return null
 }
 
 
@@ -74,16 +104,7 @@ function doCheck(value, schema, options) {
 
   if (!isObject(schema)) return value  // success
 
-  // First check the schema
-  if (!options.schemaOk) {
-    err = checkObject(schema, _schema, {schemaOk: true})
-    if (isError(err)) {
-      err.code = 'badSchema'
-      return err
-    }
-  }
-
-  // Set defaults
+  // Set default
   if (!options.ignoreDefaults
       && isDefined(schema.default)
       && isUndefined(value)) { // null is not overridden
@@ -95,6 +116,12 @@ function doCheck(value, schema, options) {
       schema.required &&
       (isUndefined(value) || isNull(value))) {
     return fail('missingParam', options.key, args)
+  }
+
+  // Check type
+  value = coerceType(value, schema, options)
+  if (isString(schema.type) && !match(tipe(value), schema.type)) {
+    return fail('badType', args)
   }
 
   switch (tipe(value)) {
@@ -114,10 +141,7 @@ function doCheck(value, schema, options) {
 // Check an object
 function checkObject(value, schema, options) {
   var args = {value: value, schema: schema, options: options}
-  // Check type
-  if (isString(schema.type) && !match('object', schema.type)) {
-    return fail('badType', args)
-  }
+
   // In strict mode check for unrecognized keys
   var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
   if (beStrict) {
@@ -165,21 +189,11 @@ function checkObject(value, schema, options) {
 function checkArray(value, schema, options) {
   var err = null
   var args = {value: value, schema: schema, options: options}
-  // Check type
-  if (isString(schema.type) && !match('array', schema.type)) {
-    return fail('badType', args)
-  }
   if (schema.value) {
     // Schema may be expressed as a nested object
     var subSchema = ('object' === schema.value.type && isObject(schema.value.value))
       ? schema.value.value
       : schema.value
-    err = checkObject(subSchema, _schema, {schemaOk: true})
-    if (isError(err)) {
-      err.code = 'badSchema'
-      return err
-    }
-    options.schemaOk = true
     value.forEach(function(elm) {
       elm = doCheck(elm, subSchema, options)  // iterate
       if (isError(elm)) {
@@ -187,7 +201,6 @@ function checkArray(value, schema, options) {
         return // forEach
       }
     })
-    options.schemaOk = false
   }
   return (isError(err)) ? err : value
 }
@@ -205,16 +218,6 @@ function checkScalar(value, schema, options) {
   if (!isObject(schema)) return value  // success
 
   if (isNull(value) || isUndefined(value)) return value // success
-
-  if (isString(value) && !options.doNotCoerce) {
-    value = coerce(value, schema)
-  }
-
-  // Check type, matching |-delimited target, i.e. 'string|number|boolean'
-  if (isString(schema.type) && isDefined(value) && !isNull(value) &&
-      !match(tipe(value), schema.type)) {
-    return fail('badType', options.key + ': ' + schema.type, args)
-  }
 
   switch (tipe(schema.value)) {
 
@@ -262,7 +265,9 @@ function checkScalar(value, schema, options) {
 
 // Query string params arrive parsed as strings
 // If the schema type is number or boolean try to cooerce
-function coerce(value, schema) {
+function coerceType(value, schema, options) {
+  if (options.doNotCoerce) return value
+  if (!isString(value)) return value
   switch(schema.type) {
     case 'number':
       var f = parseFloat(value)
