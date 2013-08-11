@@ -347,7 +347,7 @@ var t = tests.schemasCannotMistypeSchemaFields = function() {
   assert('badSchema' === err.code)
 }
 
-// t()
+t()
 // Run tests
 console.log('\nchk tests\n==========')
 for (var test in tests) {

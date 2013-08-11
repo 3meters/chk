@@ -37,8 +37,9 @@ var isScalar = tipe.isScalar
 // Main
 function chk(value, schema, options) {
 
-  var schemaErr = checkSchema(schema)
-  if (schemaErr) return schemaErr
+  // Validate schema
+  var err = checkSchema(schema)
+  if (err) return err
 
   // Configure options
   options = options || {}
@@ -51,7 +52,7 @@ function chk(value, schema, options) {
   options.rootSchema = schema
   options.schemaOk = false
 
-  // Do the work
+  // Check value
   value = doCheck(value, schema, options)
   return (isError(value)) ? value : null
 }
@@ -60,11 +61,13 @@ function chk(value, schema, options) {
 // Validate the schema
 function checkSchema(schema) {
 
+  log('schema:', schema)
+
   if (!isObject(schema)) return fail('badSchema')
 
-  return null
   var err = null
 
+  // Meta-schema
   var _schema = {
     type:     { type: 'string' },
     required: { type: 'boolean' },
@@ -73,24 +76,14 @@ function checkSchema(schema) {
     validate: { type: 'function' },
   }
 
-  // Recursively check nested schemas
   if ('object' === schema.type && isObject(schema.value)) {
-    err = checkSchema(schema.value)
-    if (isError(err)) return err
+    err = checkSchema(schema.value)  // recurse nested schema
   }
   else {
-    for (var key in schema) {
-      err = doCheck(schema[key], _schema)
-      if (isError(err)) break
-    }
+    err = doCheck(schema, _schema)
   }
 
-  if (isError(err)) {
-    err.code = 'badSchema'
-    return err
-  }
-
-  return null
+  return (isError(err)) ? err : null
 }
 
 
