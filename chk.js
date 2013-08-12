@@ -53,7 +53,8 @@ function chk(value, schema, options) {
   options.rootSchema = schema
 
   // Check value
-  return doCheck(value, schema, options)
+  err = doCheck(value, schema, options)
+  return (isError(err)) ? err : null
 }
 
 
@@ -101,13 +102,6 @@ function doCheck(value, schema, options) {
   var args = {value: value, schema: schema, options: options}
 
   if (!isObject(schema)) return value  // success
-
-  // Set default
-  if (!options.ignoreDefaults
-      && isDefined(schema.default)
-      && isUndefined(value)) { // null is not overridden
-    value = clone(schema.default)
-  }
 
   // Check required
   if (!options.ignoreRequired &&
@@ -170,6 +164,7 @@ function checkObject(value, schema, options) {
       return fail('missingParam', key, args)
     }
   }
+
   // Check the value's properties
   for (var key in value) {
     if (fields[key]) {

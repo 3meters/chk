@@ -40,14 +40,12 @@ test.basicRequired = function() {
   assert('missingParam' === err.code)
 }
 
-var p = test.basicDefault = function() {
-  var foo
-  var err = chk(foo, {default: 1})
+test.basicDefault = function() {
+  var foo = {}
+  var err = chk(foo, {n1: {default: 1}})
   assert(isNull(err))
-  assert(1 === foo)
+  assert(1 === foo.n1)
 }
-
-p()
 
 test.basicArray = function() {
   var schema = {type: 'array', value: {type: 'string'}}
@@ -364,7 +362,7 @@ test.validatorFunctions = function() {
 }
 
 test.validatorsOnWithArrays = function() {
-  return null
+//   return null
   function valid(v) {
     if (v.n1 <= v.n2) {
       var err = new Error('n1 must be greater than n2')
