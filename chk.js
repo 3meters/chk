@@ -104,9 +104,9 @@ function doCheck(value, schema, options) {
   if (!isObject(schema)) return value  // success
 
   // Check required
-  if (!options.ignoreRequired &&
-      schema.required &&
-      (isUndefined(value) || isNull(value))) {
+  if (!options.ignoreRequired
+      && schema.required
+      && (isUndefined(value) || isNull(value))) {
     return fail('missingParam', options.key, args)
   }
 
@@ -128,6 +128,8 @@ function doCheck(value, schema, options) {
   }
 
   if (isError(value)) return value
+
+  // Check final validator function
   if (isFunction(schema.validate)) {
     value = schema.validate(value)
   }
@@ -152,17 +154,22 @@ function checkObject(value, schema, options) {
     }
   }
 
-  // Set defaults and check for missing required properties
-  for (var key in fields) {
-    if (!options.ignoreDefaults
-        && isDefined(fields[key].default)
-        && isUndefined(value[key])) {
-      value[key] = clone(fields[key].default)
+  // Set defaults
+  if (!options.ignoreDefaults) {
+    for (var key in fields) {
+      if (isDefined(fields[key].default) && isUndefined(value[key])) {
+        value[key] = clone(fields[key].default)
+      }
     }
-    if (!options.ignoreRequired
-        && fields[key].required
-        && (isUndefined(value[key]) || isNull(value[key]))) {
-      return fail('missingParam', key, args)
+  }
+
+  // Check for missing required
+  if (!options.ignoreRequired) {
+    for (var key in fields) {
+      if (fields[key].required
+          && (isUndefined(value[key]) || isNull(value[key]))) {
+        return fail('missingParam', key, args)
+      }
     }
   }
 
@@ -170,14 +177,8 @@ function checkObject(value, schema, options) {
   for (var key in value) {
     if (fields[key]) {
       options.key = key
-      // SubSchema may be expressed as a nested object
-      var subSchema = (isObject(fields[key].value) && 'object' === fields[key].type)
-        ? fields[key].value
-        : fields[key]
-      value[key] = doCheck(value[key], subSchema, options)  // recurse
-      if (isError(value[key])) {
-        return value[key]
-      }
+      value[key] = doCheck(value[key], fields[key], options)  // recurse
+      if (isError(value[key])) return value[key]
     }
   }
   return value
@@ -188,11 +189,9 @@ function checkObject(value, schema, options) {
 function checkArray(value, schema, options) {
   if (schema.value) {
     for (var i = value.length; i--;) {
+      options.key = i
       var elm = doCheck(value[i], schema.value, options)
-      if (isError(elm)) {
-        elm.message += '\nArray index: ' + i
-        return elm
-      }
+      if (isError(elm)) return elm
     }
   }
   return value
@@ -206,11 +205,10 @@ function checkScalar(value, schema, options) {
 
   var args = {value: value, schema: schema, options: options}
 
-  delete args.options
-
-  if (!isObject(schema)) return value  // success
-
-  if (isNull(value) || isUndefined(value)) return value // success
+  if (!isObject(schema)
+      || isNull(value)
+      || isUndefined(value))
+    return value  // success
 
   switch (tipe(schema.value)) {
 

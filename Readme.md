@@ -64,6 +64,19 @@ schema = {n1: {
   }
 }}
 ```
+or
+```js
+schema = {
+  a1: {type: 'array', value: {
+    type: 'object',
+    validate: function(v) {
+      if (v.n1 > v.n2) return new Error('object.n1 must be greater than object.n2')
+      return null
+    }
+  }}
+}
+```
+will run the validator for each element in the array
 ### Cross-key Functional Validation
 ```js
 schema = {
@@ -122,13 +135,13 @@ schema = {
 }
 ```
 ### Nested Arrays
-Validators are applied to each element in the array
+Nested schemas are applied to each element in the array
 ```js
 schema = {a1: {type: 'array', value: {type: 'number'}}}
 err = chk({a1: [1,2,3]})  // err is null
 err = chk({a1: [1, 2, '3']})  // err is Error with code 'badType'
 ```
-### Arrays of Objects 
+### Arrays of Objects
 ```js
 schema = {
   {type: 'array' value: {type: 'object', value: {s1: {type: 'string'}, n1: {type: 'number'}}}
