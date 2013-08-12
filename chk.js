@@ -33,6 +33,7 @@ var isString = tipe.isString
 var isObject = tipe.isObject
 var isError = tipe.isError
 var isScalar = tipe.isScalar
+var isFunction = tipe.isFunction
 
 // Main
 function chk(value, schema, options) {
@@ -50,40 +51,44 @@ function chk(value, schema, options) {
   options.untrusted = options.untrusted || false
   options.rootValue = value
   options.rootSchema = schema
-  options.schemaOk = false
 
   // Check value
-  value = doCheck(value, schema, options)
-  return (isError(value)) ? value : null
+  return doCheck(value, schema, options)
 }
 
 
 // Validate the schema
 function checkSchema(schema) {
 
-  log('schema:', schema)
-
-  if (!isObject(schema)) return fail('badSchema')
-
   var err = null
+  if (!isObject(schema)) {
+    return fail(new Error('Schema must be an object'))
+  }
 
   // Meta-schema
   var _schema = {
-    type:     { type: 'string' },
-    required: { type: 'boolean' },
-    value:    { type: 'string|number|boolean|object|function' },
-    strict:   { type: 'boolean' },
-    validate: { type: 'function' },
+    type:     {type: 'string'},
+    required: {type: 'boolean'},
+    value:    {type: 'string|number|boolean|object|function'},
+    strict:   {type: 'boolean'},
+    validate: {type: 'function'}
   }
 
-  if ('object' === schema.type && isObject(schema.value)) {
-    err = checkSchema(schema.value)  // recurse nested schema
-  }
-  else {
-    err = doCheck(schema, _schema)
+  // Schemas can target scalars or objects
+  err = doCheck(schema, _schema, {doNotCoerce: true})
+  if (isError(err)) return fail(err)
+  for (var key in schema) {
+    if (isObject(schema[key])) {
+      err = checkSchema(schema[key], _schema)
+      if (isError(err)) return fail(err)
+    }
   }
 
-  return (isError(err)) ? err : null
+  function fail(err) {
+    err.code = 'badSchema'
+    return err
+  }
+  return null
 }
 
 
@@ -126,6 +131,11 @@ function doCheck(value, schema, options) {
       break
     default:
       value = checkScalar(value, schema, options)
+  }
+
+  if (isError(value)) return value
+  if (isFunction(schema.validate)) {
+    value = schema.validate(value)
   }
 
   return value
