@@ -139,17 +139,18 @@ function doCheck(value, schema, options) {
 function checkObject(value, schema, options) {
   var args = {value: value, schema: schema, options: options}
 
-  // In strict mode check for unrecognized keys
-  var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
-  if (beStrict) {
-    for (var key in value) {
-      if (!schema[key]) return fail('badParam', key, args)
-    }
-  }
   // Schema fields may be nested inside an object
   var fields = ('object' === schema.type && isObject(schema.value))
     ? schema.value
     : schema
+
+  // In strict mode check for unrecognized keys
+  var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
+  if (beStrict) {
+    for (var key in value) {
+      if (!fields[key]) return fail('badParam', key, args)
+    }
+  }
 
   // Set defaults and check for missing required properties
   for (var key in fields) {
@@ -185,22 +186,16 @@ function checkObject(value, schema, options) {
 
 // Check an array
 function checkArray(value, schema, options) {
-  var err = null
-  var args = {value: value, schema: schema, options: options}
   if (schema.value) {
-    // Schema may be expressed as a nested object
-    var subSchema = ('object' === schema.value.type && isObject(schema.value.value))
-      ? schema.value.value
-      : schema.value
-    value.forEach(function(elm) {
-      elm = doCheck(elm, subSchema, options)  // iterate
+    for (var i = value.length; i--;) {
+      var elm = doCheck(value[i], schema.value, options)
       if (isError(elm)) {
-        err = elm
-        return // forEach
+        elm.message += '\nArray index: ' + i
+        return elm
       }
-    })
+    }
   }
-  return (isError(err)) ? err : value
+  return value
 }
 
 

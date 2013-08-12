@@ -362,7 +362,6 @@ test.validatorFunctions = function() {
 }
 
 test.validatorsOnWithArrays = function() {
-//   return null
   function valid(v) {
     if (v.n1 <= v.n2) {
       var err = new Error('n1 must be greater than n2')
