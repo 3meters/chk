@@ -35,12 +35,9 @@ var isError = tipe.isError
 var isScalar = tipe.isScalar
 var isFunction = tipe.isFunction
 
-// Main
-function chk(value, schema, options) {
 
-  // Validate schema
-  var err = checkSchema(schema)
-  if (err) return err
+// Public entry point
+function chk(value, schema, options) {
 
   // Configure options
   options = options || {}
@@ -58,43 +55,7 @@ function chk(value, schema, options) {
 }
 
 
-// Validate the schema
-function checkSchema(schema) {
-
-  var err = null
-  if (!isObject(schema)) {
-    return fail(new Error('Schema must be an object'))
-  }
-
-  // Meta-schema
-  var _schema = {
-    type:     {type: 'string'},
-    required: {type: 'boolean'},
-    value:    {type: 'string|number|boolean|object|function'},
-    strict:   {type: 'boolean'},
-    validate: {type: 'function'}
-  }
-
-  // Schemas can target scalars or objects
-  err = doCheck(schema, _schema, {doNotCoerce: true})
-  if (isError(err)) return fail(err)
-  for (var key in schema) {
-    if (isObject(schema[key])) {
-      err = checkSchema(schema[key], _schema)
-      if (isError(err)) return fail(err)
-    }
-  }
-
-  function fail(err) {
-    err.code = 'badSchema'
-    return err
-  }
-  return null
-}
-
-
-// Main entry point for check.
-// Value can be an object, array, or scalar
+// Main worker
 function doCheck(value, schema, options) {
 
   var err = null
@@ -116,6 +77,7 @@ function doCheck(value, schema, options) {
     return fail('badType', args)
   }
 
+  // Check value based on type
   switch (tipe(value)) {
     case 'object':
       value = checkObject(value, schema, options)
@@ -137,8 +99,11 @@ function doCheck(value, schema, options) {
   return value
 }
 
+
 // Check an object
 function checkObject(value, schema, options) {
+
+  if (!isObject(schema)) return value
   var args = {value: value, schema: schema, options: options}
 
   // Schema fields may be nested inside an object
@@ -173,9 +138,9 @@ function checkObject(value, schema, options) {
     }
   }
 
-  // Check the value's properties
+  // Recursively check the value's properties
   for (var key in value) {
-    if (fields[key]) {
+    if (isObject(fields[key])) {
       options.key = key
       value[key] = doCheck(value[key], fields[key], options)  // recurse
       if (isError(value[key])) return value[key]
@@ -187,7 +152,8 @@ function checkObject(value, schema, options) {
 
 // Check an array
 function checkArray(value, schema, options) {
-  if (schema.value) {
+  if (!isObject(schema)) return value
+  if (isObject(schema.value)) {
     for (var i = value.length; i--;) {
       options.key = i
       var elm = doCheck(value[i], schema.value, options)
@@ -283,7 +249,6 @@ function fail(code, msg, info) {
     badParam: 'Unrecognized Parameter',
     badType: 'Invalid Type',
     badValue: 'Invalid Value',
-    badSchema: 'Invalid Schema',
   }
 
   if (isObject(msg)) msg = util.inspect(msg, false, 10)

@@ -17,13 +17,11 @@ var log = function(s, o) {
 }
 
 
-test.failsOnNonObjectSchema = function() {
+test.succeedOnEmptyOrNonObjectSchema = function() {
   var err = chk(1)
-  assert(isError(err))
-  assert('badSchema' === err.code)
+  assert(isNull(err))
   err = chk(1,1)
-  assert(isError(err))
-  assert('badSchema' === err.code)
+  assert(isNull(err))
 }
 
 
@@ -404,27 +402,6 @@ test.validatorsOnWithArrays = function() {
   err = chk(val, schema)
   assert(isError(err))
   assert('failedValidator' === err.code)
-}
-
-
-test.failOnBadlyFormedSchemas = function() {
-  var err = chk({n1: 1}, {n1: {type: 1}})
-  assert(isError(err))
-  assert('badSchema' === err.code)
-  err = chk(1, {type: 1})
-  assert(isError(err))
-  assert('badSchema' === err.code)
-  err = chk(1, {required: 'true'}) // required must be a boolean
-  assert(isError(err))
-  assert('badSchema' === err.code)
-  err = chk({o1: 1},
-      {type: 'object', value: {type: 1}})
-  assert(isError(err))
-  assert('badSchema' === err.code)
-  err = chk({o1: {o2: {s1: 1}}},
-      {o1: {type: 'object', value: {type: 1}}})
-  assert(isError(err))
-  assert('badSchema' === err.code)
 }
 
 
