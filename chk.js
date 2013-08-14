@@ -22,7 +22,7 @@
  */
 
 
-var util = require('util')
+var inspect = require('util').inspect
 var tipe = require('tipe')  // type checker, https://github.com:3meters/tipe
 var isUndefined = tipe.isUndefined
 var isDefined = tipe.isDefined
@@ -39,28 +39,19 @@ var isFunction = tipe.isFunction
 // Public entry point
 function chk(value, schema, userOptions) {
 
-  if (!isObject(userSchema)) {
-    return fail('badType', 'schema object is required')
+  if (!isObject(schema)) {
+    return fail('badType', 'schema object is required', arguments)
   }
 
-  options = {
+  // Configure options
+  var options = {
     ignoreDefaults: false,
     ignoreRequired: false,
     doNotCoerce: false,
     untrusted: false,
     strict: false,
   }
-
   options = override(options, userOptions)
-
-  // Configure options
-  if (isObject(userOptions)) {
-    for (var key in userOptions) {
-      if (isBoolean(options[key]) && isBoolean(userOptions[key])) {
-        options[key] = userOptions[key]
-      }
-    }
-  }
 
   // Check value
   err = doCheck(value, schema, options)
@@ -71,24 +62,22 @@ function chk(value, schema, userOptions) {
 // Main worker
 function doCheck(value, schema, options) {
 
-  var err = null
-  options = options || {}
-  var args = {value: value, schema: schema, options: options}
-  // log('doCheck args', args)
-
   if (!isObject(schema)) return value  // success
+
+  // Override options with those specified in the schema
+  options = override(options, schema)
 
   // Check required
   if (!options.ignoreRequired
       && schema.required
       && (isUndefined(value) || isNull(value))) {
-    return fail('missingParam', options.key, args)
+    return fail('missingParam', options.key, arguments)
   }
 
   // Check type
   value = coerceType(value, schema, options)
   if (isString(schema.type) && !match(tipe(value), schema.type)) {
-    return fail('badType', args)
+    return fail('badType', tipe(value), arguments)
   }
 
   // Check value based on type
@@ -118,7 +107,6 @@ function doCheck(value, schema, options) {
 function checkObject(value, schema, options) {
 
   if (!isObject(schema)) return value
-  var args = {value: value, schema: schema, options: options}
 
   // Schema fields may be nested inside an object
   var fields = ('object' === schema.type && isObject(schema.value))
@@ -126,10 +114,9 @@ function checkObject(value, schema, options) {
     : schema
 
   // In strict mode check for unrecognized keys
-  if (schema.strict) {
-    // log ('checking strict on ', value)
+  if (options.strict) {
     for (var key in value) {
-      if (!fields[key]) return fail('badParam', key, args)
+      if (!fields[key]) return fail('badParam', key, arguments)
     }
   }
 
@@ -147,7 +134,7 @@ function checkObject(value, schema, options) {
     for (var key in fields) {
       if (fields[key].required
           && (isUndefined(value[key]) || isNull(value[key]))) {
-        return fail('missingParam', key, args)
+        return fail('missingParam', key, arguments)
       }
     }
   }
@@ -156,9 +143,6 @@ function checkObject(value, schema, options) {
   for (var key in value) {
     if (isObject(fields[key])) {
       options.key = key
-      if (!isBoolean(fields[key].strict)) {
-        fields[key].strict = schema.strict
-      }
       value[key] = doCheck(value[key], fields[key], options)  // recurse
       if (isError(value[key])) return value[key]
     }
@@ -186,8 +170,6 @@ function checkArray(value, schema, options) {
 // returns the passed in value, which may be modified
 function checkScalar(value, schema, options) {
 
-  var args = {value: value, schema: schema, options: options}
-
   if (!isObject(schema)
       || isNull(value)
       || isUndefined(value))
@@ -202,7 +184,7 @@ function checkScalar(value, schema, options) {
       // Untrusted turns off function validators.  Useful if library
       // is exposed publically
       if (options.untrusted) {
-        return fail('badSchema', 'Function validators are not allowed', args)
+        return fail('badSchema', 'Function validators are not allowed', arguments)
       }
       // Schema.value is a user-supplied validator function. Validators
       // work like chk itself:  they return null on success or an error
@@ -218,31 +200,36 @@ function checkScalar(value, schema, options) {
 
     case 'string':
       if (!match(value, schema.value)) {
-        return fail('badValue', options.key + ': ' + schema.value, args)
+        return fail('badValue', options.key + ': ' + schema.value, arguments)
       }
       break
 
     case 'number':
     case 'boolean':
       if (schema.value !== value) {
-        return fail('badValue', options.key + ': ' + schema.value, args)
+        return fail('badValue', options.key + ': ' + schema.value, arguments)
       }
       break
 
     default:
-      return fail('badType', schema.value, args)
+      return fail('badType', schema.value, arguments)
   }
 
   return value // success
 }
 
-// If current schema has a strict setting use it,
-// otherwise use the parent's
-function beStrict(schema, parentIsStrict) {
-  return (isBoolean(schema.strict))
-    ? schema.strict
-    : parentIsStrict
+
+// Override values in object1 with values of the same type from object2
+function override(obj1, obj2) {
+  if (!(isObject(obj1) && isObject(obj2))) return obj1
+  for (var key in obj2) {
+    if (tipe(obj1[key]) === tipe(obj2[key])) {
+      obj1[key] = obj2[key]
+    }
+  }
+  return obj1
 }
+
 
 // Query string params arrive parsed as strings
 // If the schema type is number or boolean try to cooerce
@@ -266,18 +253,29 @@ function coerceType(value, schema, options) {
 
 
 // Error helper
-function fail(code, msg, info) {
+function fail(code, msg, args) {
 
-  var errCodeMap = {
+  // Map error codes to strings
+  var codeMap = {
     missingParam: 'Missing Required Parameter',
     badParam: 'Unrecognized Parameter',
     badType: 'Invalid Type',
     badValue: 'Invalid Value',
   }
 
-  if (isObject(msg)) msg = util.inspect(msg, false, 10)
-  if (isObject(info)) msg += '\n' + util.inspect(info, false, 10)
-  var err = new Error(errCodeMap[code] + ': ' + msg)
+  // Convert arguments to a meaningful object
+  args = {
+    value: args[0],
+    schema: args[1],
+    options: args[2],
+  }
+
+  // Format the message
+  msg = codeMap[code] + ': ' + msg + '\n'
+      + inspect(args, false, 10)
+
+  // Create and return the error
+  var err = new Error(msg)
   err.code = code
   return err
 }
@@ -303,8 +301,7 @@ function clone(obj) {
 
 // Debugging helper
 var log = function(s, o) {
-  if (o) s+= '\n' + util.inspect(o, false, 10)
-  console.log(s)
+  console.log(s += (o) ? '\n' + inspect(o, false, 10) : '')
 }
 
 
