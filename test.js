@@ -17,11 +17,9 @@ var log = function(s, o) {
 }
 
 
-test.succeedOnEmptyOrNonObjectSchema = function() {
-  var err = chk(1)
-  assert(isNull(err))
-  err = chk(1,1)
-  assert(isNull(err))
+test.failsOnEmptyOrNonObjectSchema = function() {
+  assert(isError(chk(1)))
+  assert(isError(chk(1, 1)))
 }
 
 
@@ -244,11 +242,13 @@ test.strictWorks = function() {
       s2: 'I am not allowed with strict'
     }
   }
-  var options = { strict: true }
-  var err = chk(value, schema, options)
+  var err = chk(value, schema)
+  assert(isNull(err))
+  err = chk(value, schema, {strict: true})
   assert(isError(err))
   assert('badParam' === err.code)
 }
+test.strictWorks()
 
 
 test.arrayTypesPass = function() {

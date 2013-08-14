@@ -37,17 +37,30 @@ var isFunction = tipe.isFunction
 
 
 // Public entry point
-function chk(value, schema, options) {
+function chk(value, schema, userOptions) {
+
+  if (!isObject(userSchema)) {
+    return fail('badType', 'schema object is required')
+  }
+
+  options = {
+    ignoreDefaults: false,
+    ignoreRequired: false,
+    doNotCoerce: false,
+    untrusted: false,
+    strict: false,
+  }
+
+  options = override(options, userOptions)
 
   // Configure options
-  options = options || {}
-  options.strict = options.strict || false  // allow non-specified fields
-  options.ignoreDefaults = options.ignoreDefaults || false
-  options.ignoreRequired = options.ignoreRequired || false
-  options.doNotCoerce = options.doNotCoerce || false
-  options.untrusted = options.untrusted || false
-  options.rootValue = value
-  options.rootSchema = schema
+  if (isObject(userOptions)) {
+    for (var key in userOptions) {
+      if (isBoolean(options[key]) && isBoolean(userOptions[key])) {
+        options[key] = userOptions[key]
+      }
+    }
+  }
 
   // Check value
   err = doCheck(value, schema, options)
@@ -61,6 +74,7 @@ function doCheck(value, schema, options) {
   var err = null
   options = options || {}
   var args = {value: value, schema: schema, options: options}
+  // log('doCheck args', args)
 
   if (!isObject(schema)) return value  // success
 
@@ -112,8 +126,8 @@ function checkObject(value, schema, options) {
     : schema
 
   // In strict mode check for unrecognized keys
-  var beStrict = (isBoolean(schema.strict)) ? schema.strict : options.strict
-  if (beStrict) {
+  if (schema.strict) {
+    // log ('checking strict on ', value)
     for (var key in value) {
       if (!fields[key]) return fail('badParam', key, args)
     }
@@ -142,6 +156,9 @@ function checkObject(value, schema, options) {
   for (var key in value) {
     if (isObject(fields[key])) {
       options.key = key
+      if (!isBoolean(fields[key].strict)) {
+        fields[key].strict = schema.strict
+      }
       value[key] = doCheck(value[key], fields[key], options)  // recurse
       if (isError(value[key])) return value[key]
     }
@@ -219,6 +236,13 @@ function checkScalar(value, schema, options) {
   return value // success
 }
 
+// If current schema has a strict setting use it,
+// otherwise use the parent's
+function beStrict(schema, parentIsStrict) {
+  return (isBoolean(schema.strict))
+    ? schema.strict
+    : parentIsStrict
+}
 
 // Query string params arrive parsed as strings
 // If the schema type is number or boolean try to cooerce
