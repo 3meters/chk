@@ -1,7 +1,7 @@
 /**
- * chk test
+ * chk tests
  *
- * test are synchronous and throw on first failure
+ * tests are synchronous and throw on first failure
  */
 
 var assert = require('assert')
@@ -11,10 +11,6 @@ var isError = tipe.isError
 var isNull = tipe.isNull
 var chk = require('./chk')
 var test = {}
-var _test = {}  // for temporarily commenting out tests
-var log = function(s, o) {
-  console.log(s += (o) ? '\n' + util.inspect(o, false, 10) : '')
-}
 
 
 test.failsOnEmptyOrNonObjectSchema = function() {
@@ -251,6 +247,33 @@ test.strictWorks = function() {
 test.strictWorks()
 
 
+test.nestedStrictWorks = function() {
+  var schema = {
+    s1: {type: 'string'},
+    o1: {
+      type: 'object',
+      required: true,
+      strict: false,
+      value: {s1: {type: 'string', required: true}}
+    }
+  }
+  var value = {
+    s1: 'foo',
+    o1: {
+      s1: 'I am required',
+      s2: 'I am not allowed with strict'
+    }
+  }
+  var err = chk(value, schema)
+  assert(isNull(err))
+  err = chk(value, schema, {strict: true})
+  assert(isNull(err))  // local option overroad global options
+  schema.o1.strict = true
+  err = chk(value, schema)
+  assert(isError(err))
+  assert('badParam' === err.code)
+}
+
 test.arrayTypesPass = function() {
   var schema = {
     a1: {type: 'array', value: {type: 'string'}},
@@ -332,26 +355,6 @@ test.functionValidatorsWorkWithNonErrorReturnCodes = function() {
 }
 
 
-test.complexFunctionValidatorsWork = function() {
-  var schema = {
-    n1: {type: 'number', required: true},
-    n2: {
-      type: 'number',
-      required: true,
-      value: function(v, obj) {
-        if (v > obj.n1) return null
-        else return 'n2 must be greater than n1'
-      }
-    }
-  }
-  var err = chk({n1: 1, n2: 2}, schema)
-  assert(!err)
-  err = chk({n1: 2, n2: 1}, schema)
-  assert(isError(err))
-  assert('badValue' === err.code)
-}
-
-
 test.schemasCanHaveExtraFields = function() {
   var schema = {
     s1: {type: 'string', foo: 'bar'}
@@ -371,6 +374,8 @@ test.validatorFunctions = function() {
   }
   var err = chk(0, schema)
   assert(isError(err))
+  err = chk(1, schema)
+  assert(isNull(err))
 }
 
 

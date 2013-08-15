@@ -77,26 +77,6 @@ schema = {
 }
 ```
 will run the validator for each element in the array
-### Cross-key Functional Validation
-```js
-schema = {
-  n1: {
-    type: 'number',
-    required: true,
-    value: function(v) {
-      if (v > 0) return null
-      else return new Error('n1 must be greater than zero')
-    }
-  },
-  n2: {
-    type: 'number'
-    value: function(v, obj) { // obj is the entire value object
-      if (v > obj.n1) return null
-      return new Errow('n2 must be greater than n1')
-    }
-  }
-}
-```
 ### Multiple Accepted Types
 ```js
 schema = {val1: {type: 'string|number|date'}}
@@ -111,8 +91,8 @@ val = {s1: 'hello'}
 err = chk(val, schema)  // err is null
 console.log(val)        // {s1: 'hello', s2: 'goodbye'}
 ```
-### Optionally attempt to coerce strings to numbers or booleans
-Handy for accepting numbers or booleans from query strings
+### Optionally Coerce Types
+Handy for casting numbers or booleans from query strings
 ```js
 schema = {n1: {type: 'number'}, b1: {type: 'boolean'}}
 val = {n1: '12', b2: 'true'}
@@ -149,7 +129,8 @@ schema = {
 var err = chk([{s1: 'foo', n1: 1}, {s1: 'bar', n1: 2}])  // err is null
 var err = chk([{s1: 'foo', n1: 1}, {s1: 'bar', n1: 'baz'}])  // err is Error with code 'badType'
 ```
-### Element-specific option overrides
+### Options can be toggled at any depth
+All options can be set at any level of the object hirearchy.  They remain set for all children unless they are overridden.  For example, a top-level schema can be strict, meaning no unrecognized properties are allowed, except for one property, which can be unstrict, allowing un-specified sub-properties, except for one of its sub-properties, which must be strict, etc.
 ```js
 schema = {
   o1: {type: 'object', value: {
@@ -159,6 +140,9 @@ schema = {
   o2: {type: 'object', strict: false, value: {
     s1: {type: 'string'},
     s2: {type: 'string'},
+    o1: {type: 'object', strict: true: value: {
+      n1: {type: 'number'}
+    }
   }
 }
 val = {
@@ -166,6 +150,10 @@ val = {
   o2: {s1: 'foo', s2: 'bar', s3: 'baz}
 }
 err = chk(val, schema, {strict: true}) // err is null because o2 strict attribute overrode option
+val.o2.o1 = {n2: 100}
+err = chk(val, schema, {strict: true}) // err is Error because schema.o2.o1 does not allow properties other than n1
+
+all options can be set at any level in this manner
 ```
 ## Copyright
   Copyright (c) 2013 3meters.  All rights reserverd.

@@ -48,7 +48,6 @@ function chk(value, schema, userOptions) {
     ignoreDefaults: false,
     ignoreRequired: false,
     doNotCoerce: false,
-    untrusted: false,
     strict: false,
   }
   options = override(options, userOptions)
@@ -60,12 +59,12 @@ function chk(value, schema, userOptions) {
 
 
 // Main worker
-function doCheck(value, schema, options) {
+function doCheck(value, schema, parentOptions) {
 
   if (!isObject(schema)) return value  // success
 
   // Override options with those specified in the schema
-  options = override(options, schema)
+  options = override(parentOptions, schema)
 
   // Check required
   if (!options.ignoreRequired
@@ -181,16 +180,9 @@ function checkScalar(value, schema, options) {
       break
 
     case 'function':
-      // Untrusted turns off function validators.  Useful if library
-      // is exposed publically
-      if (options.untrusted) {
-        return fail('badSchema', 'Function validators are not allowed', arguments)
-      }
-      // Schema.value is a user-supplied validator function. Validators
-      // work like chk itself:  they return null on success or an error
-      // or other positive value on failure. Cross-key validation may be
-      // performed using the optional params rootValue and key
-      var err = schema.value(value, options.rootValue, options.key)
+      // Schema.value is a user-supplied validator function. Validators should
+      // return null on success, or an error or other positive value on failure.
+      var err = schema.value(value)
       if (err) {
         if (!isError(err)) err = new Error(err)
         err.code = err.code || 'badValue'
@@ -219,15 +211,18 @@ function checkScalar(value, schema, options) {
 }
 
 
-// Override values in object1 with values of the same type from object2
+// Create a copy of obj1 with properties overridden by those
+// of obj2 of the same type
 function override(obj1, obj2) {
   if (!(isObject(obj1) && isObject(obj2))) return obj1
+  var newObj = {}
+  for (var key in obj1) { newObj[key] = obj1[key] }
   for (var key in obj2) {
     if (tipe(obj1[key]) === tipe(obj2[key])) {
-      obj1[key] = obj2[key]
+      newObj[key] = obj2[key]
     }
   }
-  return obj1
+  return newObj
 }
 
 
@@ -292,7 +287,7 @@ function match(str, strEnum) {
 
 // Returns null for objects that JSON can't serialize
 function clone(obj) {
-  if (isScalar(obj)) return obj
+  if (!isObject(obj)) return obj
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
   catch(e) { return null }
   return clonedObj
