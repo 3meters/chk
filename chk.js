@@ -49,6 +49,7 @@ function chk(value, schema, userOptions) {
     ignoreRequired: false,
     doNotCoerce: false,
     strict: false,
+    log: false,
   }
   options = override(options, userOptions)
 
@@ -65,6 +66,9 @@ function doCheck(value, schema, parentOptions) {
 
   // Override options with those specified in the schema
   options = override(parentOptions, schema)
+
+  // Log arguments
+  if (options.log) log(arguments)
 
   // Check required
   if (!options.ignoreRequired
@@ -296,6 +300,13 @@ function clone(obj) {
 
 // Debugging helper
 var log = function(s, o) {
+  if (tipe.isArguments(s)) {
+    return log('chk arguments:', {
+      value: s[0],
+      schema: s[1],
+      options: s[2]
+    })
+  }
   console.log(s += (o) ? '\n' + inspect(o, false, 10) : '')
 }
 

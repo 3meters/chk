@@ -129,8 +129,19 @@ schema = {
 var err = chk([{s1: 'foo', n1: 1}, {s1: 'bar', n1: 2}])  // err is null
 var err = chk([{s1: 'foo', n1: 1}, {s1: 'bar', n1: 'baz'}])  // err is Error with code 'badType'
 ```
-### Options can be toggled at any depth
-All options can be set at any level of the object hirearchy.  They remain set for all children unless they are overridden.  For example, a top-level schema can be strict, meaning no unrecognized properties are allowed, except for one property, which can be unstrict, allowing un-specified sub-properties, except for one of its sub-properties, which must be strict, etc.
+### Options
+Options and their defaults are:
+```js
+  {
+    strict: false,          // do not allow unspecified properties of objects
+    ignoreDefaults: false,  // do not set default values, handy for db updates
+    ignoreRequired: false,  // do not enforce required, handy for db updates
+    doNotCoerce: false,     // do not coerce types
+    log: false              // log the arguments to each recursive chk call,
+                            //     handy for debugging deeply nested schemas
+  }
+```
+Options can be set as an optional third argument to the top level call, or as properties of any schema or sub-schema.  They remain set for all children unless they are overridden.  For example, a top-level schema can be strict, meaning no unrecognized properties are allowed, except for one property, which can be unstrict, allowing un-specified sub-properties, except for one of its sub-properties, which must be strict, etc. For example: 
 ```js
 schema = {
   o1: {type: 'object', value: {
@@ -153,7 +164,6 @@ err = chk(val, schema, {strict: true}) // err is null because o2 strict attribut
 val.o2.o1 = {n2: 100}
 err = chk(val, schema, {strict: true}) // err is Error because schema.o2.o1 does not allow properties other than n1
 
-all options can be set at any level in this manner
 ```
 ## Copyright
   Copyright (c) 2013 3meters.  All rights reserverd.

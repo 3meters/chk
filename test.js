@@ -13,12 +13,6 @@ var chk = require('./chk')
 var test = {}
 
 
-test.failsOnEmptyOrNonObjectSchema = function() {
-  assert(isError(chk(1)))
-  assert(isError(chk(1, 1)))
-}
-
-
 test.minimalWorks = function() {
   var schema = {type: 'number', required: true}
   var err = chk(1, schema)
