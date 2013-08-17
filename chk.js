@@ -24,22 +24,12 @@
 
 var inspect = require('util').inspect
 var tipe = require('tipe')  // type checker, https://github.com:3meters/tipe
-var isUndefined = tipe.isUndefined
-var isDefined = tipe.isDefined
-var isNull = tipe.isNull
-var isBoolean = tipe.isBoolean
-var isNumber = tipe.isNumber
-var isString = tipe.isString
-var isObject = tipe.isObject
-var isError = tipe.isError
-var isScalar = tipe.isScalar
-var isFunction = tipe.isFunction
 
 
 // Public entry point
 function chk(value, schema, userOptions) {
 
-  if (!isObject(schema)) {
+  if (!tipe.object(schema)) {
     return fail('badType', 'schema object is required', arguments)
   }
 
@@ -53,16 +43,20 @@ function chk(value, schema, userOptions) {
   }
   options = override(options, userOptions)
 
+  // For contextual error reporting
+  options.rootValue = value
+  options.rootSchema = schema
+
   // Check value
   err = doCheck(value, schema, options)
-  return (isError(err)) ? err : null
+  return (tipe.error(err)) ? err : null
 }
 
 
 // Main worker
 function doCheck(value, schema, parentOptions) {
 
-  if (!isObject(schema)) return value  // success
+  if (!tipe.object(schema)) return value  // success
 
   // Override options with those specified in the schema
   options = override(parentOptions, schema)
@@ -73,20 +67,20 @@ function doCheck(value, schema, parentOptions) {
   // Check required
   if (!options.ignoreRequired
       && schema.required
-      && (isUndefined(value) || isNull(value))) {
+      && (tipe.undefined(value) || tipe.null(value))) {
     return fail('missingParam', options.key, arguments)
   }
 
   // Check type
   value = coerceType(value, schema, options)
-  if (isString(schema.type) && !match(tipe(value), schema.type)) {
+  if (tipe.string(schema.type) && !match(tipe(value), schema.type)) {
     return fail('badType', tipe(value), arguments)
   }
 
   // Check value based on type
   switch (tipe(value)) {
     case 'object':
-      value = checkObject(value, schema, options)
+      value = checkobject(value, schema, options)
       break
     case 'array':
       value = checkArray(value, schema, options)
@@ -95,10 +89,10 @@ function doCheck(value, schema, parentOptions) {
       value = checkScalar(value, schema, options)
   }
 
-  if (isError(value)) return value
+  if (tipe.error(value)) return value
 
   // Check final validator function
-  if (isFunction(schema.validate)) {
+  if (tipe.function(schema.validate)) {
     value = schema.validate(value)
   }
 
@@ -107,12 +101,12 @@ function doCheck(value, schema, parentOptions) {
 
 
 // Check an object
-function checkObject(value, schema, options) {
+function checkobject(value, schema, options) {
 
-  if (!isObject(schema)) return value
+  if (!tipe.object(schema)) return value
 
   // Schema fields may be nested inside an object
-  var fields = ('object' === schema.type && isObject(schema.value))
+  var fields = ('object' === schema.type && tipe.object(schema.value))
     ? schema.value
     : schema
 
@@ -126,7 +120,7 @@ function checkObject(value, schema, options) {
   // Set defaults
   if (!options.ignoreDefaults) {
     for (var key in fields) {
-      if (isDefined(fields[key].default) && isUndefined(value[key])) {
+      if (tipe.defined(fields[key].default) && tipe.undefined(value[key])) {
         value[key] = clone(fields[key].default)
       }
     }
@@ -136,7 +130,7 @@ function checkObject(value, schema, options) {
   if (!options.ignoreRequired) {
     for (var key in fields) {
       if (fields[key].required
-          && (isUndefined(value[key]) || isNull(value[key]))) {
+          && (tipe.undefined(value[key]) || tipe.null(value[key]))) {
         return fail('missingParam', key, arguments)
       }
     }
@@ -144,10 +138,10 @@ function checkObject(value, schema, options) {
 
   // Recursively check the value's properties
   for (var key in value) {
-    if (isObject(fields[key])) {
+    if (tipe.object(fields[key])) {
       options.key = key
       value[key] = doCheck(value[key], fields[key], options)  // recurse
-      if (isError(value[key])) return value[key]
+      if (tipe.error(value[key])) return value[key]
     }
   }
   return value
@@ -156,12 +150,12 @@ function checkObject(value, schema, options) {
 
 // Check an array
 function checkArray(value, schema, options) {
-  if (!isObject(schema)) return value
-  if (isObject(schema.value)) {
+  if (!tipe.object(schema)) return value
+  if (tipe.object(schema.value)) {
     for (var i = value.length; i--;) {
       options.key = i
       var elm = doCheck(value[i], schema.value, options)
-      if (isError(elm)) return elm
+      if (tipe.error(elm)) return elm
     }
   }
   return value
@@ -173,9 +167,9 @@ function checkArray(value, schema, options) {
 // returns the passed in value, which may be modified
 function checkScalar(value, schema, options) {
 
-  if (!isObject(schema)
-      || isNull(value)
-      || isUndefined(value))
+  if (!tipe.object(schema)
+      || tipe.null(value)
+      || tipe.undefined(value))
     return value  // success
 
   switch (tipe(schema.value)) {
@@ -188,7 +182,7 @@ function checkScalar(value, schema, options) {
       // return null on success, or an error or other positive value on failure.
       var err = schema.value(value)
       if (err) {
-        if (!isError(err)) err = new Error(err)
+        if (!tipe.error(err)) err = new Error(err)
         err.code = err.code || 'badValue'
         return err
       }
@@ -218,7 +212,7 @@ function checkScalar(value, schema, options) {
 // Create a copy of obj1 with properties overridden by those
 // of obj2 of the same type
 function override(obj1, obj2) {
-  if (!(isObject(obj1) && isObject(obj2))) return obj1
+  if (!(tipe.object(obj1) && tipe.object(obj2))) return obj1
   var newObj = {}
   for (var key in obj1) { newObj[key] = obj1[key] }
   for (var key in obj2) {
@@ -234,7 +228,7 @@ function override(obj1, obj2) {
 // If the schema type is number or boolean try to cooerce
 function coerceType(value, schema, options) {
   if (options.doNotCoerce) return value
-  if (!isString(value)) return value
+  if (!tipe.string(value)) return value
   switch(schema.type) {
     case 'number':
       var f = parseFloat(value)
@@ -244,7 +238,7 @@ function coerceType(value, schema, options) {
       if (value === '0') value = 0
       break
     case 'boolean':
-      value = tipe.isTruthy(value)
+      value = tipe.truthy(value)
       break
   }
   return value
@@ -282,7 +276,7 @@ function fail(code, msg, args) {
 
 // Pipe-delimited enum: returns true if 'bar' equals any of 'foo|bar|baz'
 function match(str, strEnum) {
-  if (!isString(strEnum)) return false
+  if (!tipe.string(strEnum)) return false
   return strEnum.split('|').some(function(member) {
     return (member === str)
   })
@@ -291,7 +285,7 @@ function match(str, strEnum) {
 
 // Returns null for objects that JSON can't serialize
 function clone(obj) {
-  if (!isObject(obj)) return obj
+  if (!tipe.object(obj)) return obj
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
   catch(e) { return null }
   return clonedObj
@@ -301,10 +295,16 @@ function clone(obj) {
 // Debugging helper
 var log = function(s, o) {
   if (tipe.isArguments(s)) {
+    if (tipe.isObject(s[2])) {
+      var ops = s[2]
+      // useful for errors, but noise log stack
+      delete ops.rootSchema
+      delete ops.rootValue
+    }
     return log('chk arguments:', {
       value: s[0],
       schema: s[1],
-      options: s[2]
+      options: ops
     })
   }
   console.log(s += (o) ? '\n' + inspect(o, false, 10) : '')
