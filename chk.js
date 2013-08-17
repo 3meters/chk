@@ -73,7 +73,9 @@ function doCheck(value, schema, parentOptions) {
 
   // Check type
   value = coerceType(value, schema, options)
-  if (tipe.string(schema.type) && !match(tipe(value), schema.type)) {
+  if (tipe.defined(value)
+      && tipe.string(schema.type)
+      && !match(tipe(value), schema.type)) {
     return fail('badType', tipe(value), arguments)
   }
 

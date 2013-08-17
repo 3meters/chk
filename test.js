@@ -152,6 +152,9 @@ test.coerceStrings = function() {
   assert(false === value.b5)
 }
 
+test.undefinedValuesPassTypeCheck = function() {
+  assert(isNull(chk({s1: undefined}, {s1: {type: 'string'}})))
+}
 
 test.missingRequiredScalar = function() {
   var schema =  {type: 'number', required: true}
@@ -402,6 +405,7 @@ test.validatorsOnWithArrays = function() {
   assert(isError(err))
   assert('failedValidator' === err.code)
 }
+
 
 
 // Run test
