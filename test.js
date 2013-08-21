@@ -322,9 +322,9 @@ test.functionValidatorsWork = function() {
   var schema = {
     type: 'string',
     value: function(v) {
-      // true if first char is uppercase
-      if (v[0] && v[0] === v[0].toUpperCase()) return null
-      else return new Error('Must be uppercase')
+      if (v[0] && v[0] !== v[0].toUpperCase()) {
+        return 'Must be uppercase'
+      }
     }
   }
   var err = chk('Hello', schema)
@@ -335,20 +335,35 @@ test.functionValidatorsWork = function() {
 }
 
 
-test.functionValidatorsWorkWithNonErrorReturnCodes = function() {
+test.functionValidatorsWorkWithCustomErrorCodes = function() {
   var schema = {
     type: 'string',
     value: function(v) {
       // true if first char is uppercase
-      if (v[0] && v[0] === v[0].toUpperCase()) return null
-      else return 'Must be uppercase'
+      if (v[0] && v[0] !== v[0].toUpperCase()) {
+        var err = new Error('Must be uppercase')
+        err.code = 'mustBeUppercase'
+        return err
+      }
     }
   }
   var err = chk('Hello', schema)
   assert(!err)
   err = chk('hello', schema)
   assert(isError(err))
-  assert('badValue' === err.code)
+  assert('mustBeUppercase' === err.code)
+}
+
+test.functionValidatorsGiveSchemaErrIfTheyThrow = function() {
+  var schema = {
+    type: 'string',
+    value: function(v) {
+      foo.bar // will throw a runtime error
+    }
+  }
+  var err = chk('Hello', schema)
+  assert(isError(err))
+  assert('badSchema' === err.code)
 }
 
 

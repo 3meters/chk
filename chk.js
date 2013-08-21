@@ -95,7 +95,8 @@ function doCheck(value, schema, parentOptions) {
 
   // Check final validator function
   if (tipe.function(schema.validate)) {
-    value = schema.validate(value)
+    var err = validate(schema.validate, value, options)
+    if (err) return err
   }
 
   return value
@@ -180,14 +181,9 @@ function checkScalar(value, schema, options) {
       break
 
     case 'function':
-      // Schema.value is a user-supplied validator function. Validators should
-      // return null on success, or an error or other positive value on failure.
-      var err = schema.value(value)
-      if (err) {
-        if (!tipe.error(err)) err = new Error(err)
-        err.code = err.code || 'badValue'
-        return err
-      }
+      // schema-defined validator function
+      var err = validate(schema.value, value, options)
+      if (err) return err
       break
 
     case 'string':
@@ -208,6 +204,24 @@ function checkScalar(value, schema, options) {
   }
 
   return value // success
+}
+
+
+// Execute a schema-defined validator function.
+// Only for trusted code.
+// TODO: add an untrusted option that will execute the
+// function in a separate vm or process.
+function validate(fn, value, options) {
+  try { var err = fn(value) }
+  catch (e) {
+    return fail('badSchema', 'Validator threw exception ' + e.message)
+  }
+  if (err) {
+    if (!tipe.error(err)) err = new Error(err)
+    err.code = err.code || 'badValue'
+    return err
+  }
+  return null
 }
 
 
@@ -256,13 +270,16 @@ function fail(code, msg, args) {
     badParam: 'Unrecognized Parameter',
     badType: 'Invalid Type',
     badValue: 'Invalid Value',
+    badSchema: 'Invalid Schema',
   }
 
   // Convert arguments to a meaningful object
-  args = {
-    value: args[0],
-    schema: args[1],
-    options: args[2],
+  if (args) {
+    args = {
+      value: args[0],
+      schema: args[1],
+      options: args[2],
+    }
   }
 
   // Format the message
