@@ -273,22 +273,31 @@ function fail(code, msg, args) {
     badSchema: 'Invalid Schema',
   }
 
+
   // Convert arguments to a meaningful object
   if (args) {
     args = {
       value: args[0],
       schema: args[1],
-      options: args[2],
     }
   }
 
+  // If any options have been set add them to the argments
+  var options = args && args[2] || {}
+  var setOptions = {}
+  for (var key in options) {
+    if (options[key]) setOptions[key] = options[key]
+  }
+  if (Object.keys(setOptions).length) args.options = setOptions
+
+
   // Format the message
-  msg = codeMap[code] + ': ' + msg + '\n'
-      + inspect(args, false, 10)
+  msg = codeMap[code] + ': ' + msg
 
   // Create and return the error
   var err = new Error(msg)
   err.code = code
+  err.info = args
   return err
 }
 
