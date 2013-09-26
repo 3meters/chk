@@ -44,7 +44,7 @@ function chk(value, schema, userOptions) {
   options = override(options, userOptions)
 
   // For contextual error reporting
-  options.rootValue = value
+  options.rootValue = clone(value) // safe copy
   options.rootSchema = schema
 
   // Check value
@@ -59,7 +59,7 @@ function doCheck(value, schema, parentOptions) {
   if (!tipe.object(schema)) return value  // success
 
   // Override options with those specified in the schema
-  options = override(parentOptions, schema)
+  var options = override(parentOptions, schema)
 
   // Log arguments
   if (options.log) log(arguments)
@@ -274,22 +274,20 @@ function fail(code, msg, args) {
   }
 
 
-  // Convert arguments to a meaningful object
+  // Convert arguments to a meaningful object for extended error information
+  var info, options
   if (args) {
-    args = {
+    info = {
       value: args[0],
       schema: args[1],
     }
+    options = args[2]
+    if (options) {
+      for (var key in options) {
+        if (options[key]) info[key] = options[key]  // only display set options
+      }
+    }
   }
-
-  // If any options have been set add them to the argments
-  var options = args && args[2] || {}
-  var setOptions = {}
-  for (var key in options) {
-    if (options[key]) setOptions[key] = options[key]
-  }
-  if (Object.keys(setOptions).length) args.options = setOptions
-
 
   // Format the message
   msg = codeMap[code] + ': ' + msg
@@ -297,7 +295,7 @@ function fail(code, msg, args) {
   // Create and return the error
   var err = new Error(msg)
   err.code = code
-  err.info = args
+  if (info) err.info = info
   return err
 }
 
