@@ -2,9 +2,9 @@
 
   A simple, recursive, javascript value checker
 
-  chk tests values against simple schemas. It supports required and default values, string enums, nested objects and arrays, optional type coercion, custom functional validators, and optional rejection of unknown keys.  It is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to.  
+  chk tests values against simple schemas. It supports required and default values, string enums, nested objects and arrays, optional type coercion, custom functional validators, and optional rejection of unknown keys.  It is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to.
   
-  chk is reasonably mature, used heavily in a closed-source production system. Since diagnosing schema failures in deeply nested object can be tricky, particular care has been taken to provide detailed context in errors.  
+  chk is reasonably mature, used heavily in a closed-source production system. Since diagnosing schema failures in deeply nested object can be tricky, particular care has been taken to provide detailed context in errors.
    
 ## Install for nodejs
 
@@ -24,7 +24,7 @@ var err = chk(val, schema)   // err is null
 val = 1
 err = chk(val, schema)       // err is Error with code 'badType'
 ```
-### Values can be scalars or objects 
+### Values can be scalars or objects
 ```js
 schema = {
   str1: {type: 'string'},
@@ -75,6 +75,20 @@ schema = {
     }
   }}
 }
+```
+validators can access the this property using chk.call
+```js
+function valid(v) {
+  if (v < this.val) return 'fail'
+}
+var schema = {
+  validate: valid
+}
+var obj = {val: 0}
+var err = chk.call(obj, 1, schema)  // err is null
+obj = {val: 2}
+err = chk.call(obj, 1, schema)      // err is Error with message 'fail'
+
 ```
 will run the validator for each element in the array
 ### Multiple Accepted Types

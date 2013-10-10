@@ -387,7 +387,7 @@ test.schemasCanHaveExtraFields = function() {
 
 test.validatorFunctions = function() {
   function valid(v) {
-    if (v < 1) return new Error()
+    if (v < 1) return 'fail'
   }
   var schema = {
     validate: valid
@@ -396,6 +396,22 @@ test.validatorFunctions = function() {
   assert(isError(err))
   err = chk(1, schema)
   assert(isNull(err))
+}
+
+
+test.validatorFunctionsCanAccessThis = function() {
+  function valid(v) {
+    if (v < this.val) return 'fail'
+  }
+  var schema = {
+    validate: valid
+  }
+  var obj = {val: 0}
+  var err = chk.call(obj, 1, schema)
+  assert(isNull(err))
+  obj = {val: 2}
+  err = chk.call(obj, 1, schema)
+  assert(isError(err))
 }
 
 

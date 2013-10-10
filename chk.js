@@ -42,6 +42,7 @@ function chk(value, schema, userOptions) {
     log: false,
   }
   options = override(options, userOptions)
+  options.this = this
 
   // For contextual error reporting
   options.rootValue = clone(value) // safe copy
@@ -212,7 +213,7 @@ function checkScalar(value, schema, options) {
 // TODO: add an untrusted option that will execute the
 // function in a separate vm or process.
 function validate(fn, value, options) {
-  try { var err = fn(value) }
+  try { var err = fn.call(options.this, value) }
   catch (e) {
     return fail('badSchema', 'Validator threw exception ' + e.message)
   }
