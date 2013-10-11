@@ -124,6 +124,9 @@ function checkobject(value, schema, options) {
     for (var key in fields) {
       if (tipe.defined(fields[key].default) && tipe.undefined(value[key])) {
         value[key] = clone(fields[key].default)
+        if (tipe.error(value[key])) {
+          return fail('badSchema', 'Invalid default. Could not serialize as JSON.', arguments)
+        }
       }
     }
   }
@@ -325,7 +328,7 @@ function match(str, strEnum) {
 function clone(obj) {
   if (!tipe.object(obj)) return obj
   try { var clonedObj = JSON.parse(JSON.stringify(obj)) }
-  catch(e) { return null }
+  catch(e) { return e }
   return clonedObj
 }
 
