@@ -215,12 +215,12 @@ function checkScalar(value, schema, options) {
 function validate(fn, value, options) {
   try { var err = fn.call(options.this, value) }
   catch (e) {
-    return fail('badSchema', 'Validator threw exception ' + e.message)
+    return fail('badSchema', 'Validator threw exception ' + e.message, arguments)
   }
   if (err) {
     if (!tipe.error(err)) err = new Error(err)
     err.code = err.code || 'badValue'
-    return err
+    return fail(err.code, err, arguments)
   }
   return null
 }
@@ -265,6 +265,8 @@ function coerceType(value, schema, options) {
 // Error helper
 function fail(code, msg, args) {
 
+  var err
+
   // Map error codes to strings
   var codeMap = {
     missingParam: 'Missing Required Parameter',
@@ -284,18 +286,19 @@ function fail(code, msg, args) {
     }
     options = args[2]
     if (options) {
+      delete options.this
       for (var key in options) {
         if (options[key]) info[key] = options[key]  // only display set options
       }
     }
   }
 
-  // Format the message
-  msg = codeMap[code] + ': ' + msg
-
-  // Create and return the error
-  var err = new Error(msg)
-  err.code = code
+  if (tipe.isError(msg)) err = msg
+  else {
+    msg = codeMap[code] + ': ' + msg
+    err = new Error(msg)
+  }
+  err.code = err.code || code
   if (info) err.info = info
   return err
 }
@@ -324,9 +327,10 @@ var log = function(s, o) {
   if (tipe.isArguments(s)) {
     if (tipe.isObject(s[2])) {
       var ops = s[2]
-      // useful for errors, but noise log stack
+      // useful for errors, but noise in log stack
       delete ops.rootSchema
       delete ops.rootValue
+      delete ops.this
     }
     return log('chk arguments:', {
       value: s[0],

@@ -412,6 +412,8 @@ test.validatorFunctionsCanAccessThis = function() {
   obj = {val: 2}
   err = chk.call(obj, 1, schema)
   assert(isError(err))
+  assert(err.info)
+  assert(!err.info.this)
 }
 
 
