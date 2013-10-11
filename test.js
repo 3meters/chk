@@ -4,14 +4,19 @@
  * tests are synchronous and throw on first failure
  */
 
-var assert = require('assert')
+var _assert = require('assert')
 var util = require('util')
 var tipe = require('tipe')    // type checker -- https://github.com:3meters/tipe
 var isError = tipe.isError
 var isNull = tipe.isNull
 var chk = require('./chk')
 var test = {}
+var cTests = 0
 
+function assert(expr, msg) {
+  _assert(expr, msg)
+  cTests++
+}
 
 test.minimalWorks = function() {
   var schema = {type: 'number', required: true}
@@ -51,8 +56,6 @@ test.basicArray = function() {
   assert(isError(err))
   assert('badType' === err.code)
   assert(err.info)
-  assert(err.info.rootValue)
-  assert(4 === err.info.rootValue.length)
   assert(err.info.rootSchema)
   assert('array' === err.info.rootSchema.type)
   assert(tipe.isUndefined(err.info.strict))
@@ -326,7 +329,7 @@ test.enumsWork = function() {
 }
 
 
-test.functionValidatorsWork = function() {
+test.validatorsWork = function() {
   var schema = {
     type: 'string',
     value: function(v) {
@@ -340,6 +343,20 @@ test.functionValidatorsWork = function() {
   err = chk('hello', schema)
   assert(isError(err))
   assert('badValue' === err.code)
+}
+
+
+test.namedValidatorsWork = function() {
+  function valid(v) {
+    if (v < 1) return 'fail'
+  }
+  var schema = {
+    validate: valid
+  }
+  var err = chk(0, schema)
+  assert(isError(err))
+  err = chk(1, schema)
+  assert(isNull(err))
 }
 
 
@@ -362,6 +379,7 @@ test.functionValidatorsWorkWithCustomErrorCodes = function() {
   assert('mustBeUppercase' === err.code)
 }
 
+
 test.functionValidatorsGiveSchemaErrIfTheyThrow = function() {
   var schema = {
     type: 'string',
@@ -375,43 +393,28 @@ test.functionValidatorsGiveSchemaErrIfTheyThrow = function() {
 }
 
 
-test.schemasCanHaveExtraFields = function() {
-  var schema = {
-    s1: {type: 'string', foo: 'bar'}
-  }
-  var val = {s1: 'hello'}
-  var err = chk(val, schema)
-  if (err) throw err
-}
 
-
-test.validatorFunctions = function() {
-  function valid(v) {
-    if (v < 1) return 'fail'
-  }
-  var schema = {
-    validate: valid
-  }
-  var err = chk(0, schema)
-  assert(isError(err))
-  err = chk(1, schema)
-  assert(isNull(err))
-}
-
-
-test.validatorFunctionsCanAccessThis = function() {
+test.validatorsCanAccessThisObjectAndUserDefinedOptions = function() {
   var schema = {
     n1: {type: 'number', default: 0},
     n2: {type: 'number', validate: n2Validate}
   }
-  function n2Validate(v) {
+  function n2Validate(v, options) {
     if (v !== this.n1) return 'n2 must equal n1'
+    if (v !== options.n3)  return 'n2 must equal options.n3'
   }
-  var err = chk({n1:1, n2:1}, schema)
+  var err = chk({n1:1, n2:1}, schema, {n3: 1})
   assert(isNull(err))
-  err = chk({n1:1, n2:2}, schema)
+  err = chk({n1:1, n2:2}, schema, {n3: 1})
   assert(isError(err))
   assert('badValue' === err.code)
+  assert('n2 must equal n1' === err.message)
+  err = chk({n1:2, n2:2}, schema)
+  assert(isError(err))
+  assert('n2 must equal options.n3' === err.message)
+  err = chk({n1:2, n2:2}, schema, {n3: 3})
+  assert(isError(err))
+  assert('n2 must equal options.n3' === err.message)
 }
 
 
@@ -446,11 +449,20 @@ test.validatorsOnWithArrays = function() {
 }
 
 
+test.schemasCanHaveExtraFields = function() {
+  var schema = {
+    s1: {type: 'string', foo: 'bar'}
+  }
+  var val = {s1: 'hello'}
+  var err = chk(val, schema)
+  if (err) throw err
+}
 
-// Run test
+
+// Run tests
 console.log('\nchk test\n==========')
 for (var t in test) {
   console.log(t)
   test[t]()
 }
-console.log('\nchk test pass')
+console.log('\n' + cTests + ' chk tests passed')

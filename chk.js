@@ -237,15 +237,20 @@ function callValidator(fn, value, options) {
 }
 
 
-// Create a copy of obj1 with properties overridden by those
-// of obj2 of the same type
+// Like extend, except that in order to override an option
+// the new option must match the old option's type
 function override(obj1, obj2) {
   if (!(tipe.object(obj1) && tipe.object(obj2))) return obj1
   var newObj = {}
   for (var key in obj1) { newObj[key] = obj1[key] }
   for (var key in obj2) {
-    if (tipe(obj1[key]) === tipe(obj2[key])) {
+    if (tipe.isUndefined(obj1[key])) {
       newObj[key] = obj2[key]
+    }
+    else {
+      if (tipe(obj1[key]) === tipe(obj2[key])) {
+        newObj[key] = obj2[key]
+      }
     }
   }
   return newObj
@@ -297,7 +302,7 @@ function fail(code, msg, args) {
     }
     options = args[2]
     if (options) {
-      delete options.this
+      delete options.rootValue
       for (var key in options) {
         if (options[key]) info[key] = options[key]  // only display set options
       }
