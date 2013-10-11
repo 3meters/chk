@@ -5,16 +5,15 @@
  * if (err) throw err
  * ...
  *
- * Chk is a synchronous parameter checker. It returns null on
- * success or an error if the passsed-in object mismatches the
+ * Chk is a synchronous value checker. It returns null on
+ * success or an error if the passsed-in value violates the
  * passed-in schema.
  *
- * Chk is not idempotent.  It may modify the passed-in value
- * via the defaults parameter of the schema, via type coersion,
- * or via arbitrary code in schema validator functions. Chk
- * never modifies the passed-in schema. It iterates for fields
- * of type array, and recurses for fields of type object.
+ * Chk may modify the passed-in value, but it never modifies
+ * the passed-in schema.
  *
+ * Chk iterates for fields of type array, and recurses for
+ * fields of type object.
  *
  * Copyright (c) 2013 3meters.  All rights reserved.
  *
@@ -42,20 +41,19 @@ function chk(value, schema, userOptions) {
     log: false,
   }
   options = override(options, userOptions)
-  options.this = this
 
   // For contextual error reporting
-  options.rootValue = clone(value) // safe copy
+  options.rootValue = value
   options.rootSchema = schema
 
   // Check value
-  err = doCheck(value, schema, options)
+  err = _chk(value, schema, options)
   return (tipe.error(err)) ? err : null
 }
 
 
 // Main worker
-function doCheck(value, schema, parentOptions) {
+function _chk(value, schema, parentOptions) {
 
   if (!tipe.object(schema)) return value  // success
 
@@ -96,8 +94,8 @@ function doCheck(value, schema, parentOptions) {
 
   // Check final validator function
   if (tipe.function(schema.validate)) {
-    var err = validate(schema.validate, value, options)
-    if (err) return err
+    var err = callValidator(schema.validate, value, options)
+    if (err) return fail(err.code, err, arguments)
   }
 
   return value
@@ -144,7 +142,7 @@ function checkobject(value, schema, options) {
   for (var key in value) {
     if (tipe.object(fields[key])) {
       options.key = key
-      value[key] = doCheck(value[key], fields[key], options)  // recurse
+      value[key] = _chk(value[key], fields[key], options)  // recurse
       if (tipe.error(value[key])) return value[key]
     }
   }
@@ -158,7 +156,7 @@ function checkArray(value, schema, options) {
   if (tipe.object(schema.value)) {
     for (var i = value.length; i--;) {
       options.key = i
-      var elm = doCheck(value[i], schema.value, options)
+      var elm = _chk(value[i], schema.value, options)
       if (tipe.error(elm)) return elm
     }
   }
@@ -181,10 +179,11 @@ function checkScalar(value, schema, options) {
     case 'undefined':
       break
 
+    // deprecated, use validate property instead
     case 'function':
       // schema-defined validator function
-      var err = validate(schema.value, value, options)
-      if (err) return err
+      var err = callValidator(schema.value, value, options)
+      if (err) return fail(err.code, err, arguments)
       break
 
     case 'string':
@@ -208,19 +207,28 @@ function checkScalar(value, schema, options) {
 }
 
 
-// Execute a schema-defined validator function.
-// Only for trusted code.
-// TODO: add an untrusted option that will execute the
-// function in a separate vm or process.
-function validate(fn, value, options) {
-  try { var err = fn.call(options.this, value) }
-  catch (e) {
-    return fail('badSchema', 'Validator threw exception ' + e.message, arguments)
+/*
+ * Execute a schema-defined validator function.
+ * The this object inside validators refers to the
+ * originally passed in root value, even though the
+ * validator may be operating on a sub-node.
+ *
+ * Warning: this is only for trusted code.
+ * TODO: add an untrusted option that will execute the
+ * function in a separate vm or process.
+ */
+function callValidator(fn, value, options) {
+  var err
+  try { err = fn.call(options.rootValue, value, options) }
+  catch (schemaErr) {
+    schemaErr.message = 'Validator threw exception ' + schemaErr.message
+    schemaErr.code = 'badSchema'
+    return schemaErr
   }
   if (err) {
     if (!tipe.error(err)) err = new Error(err)
     err.code = err.code || 'badValue'
-    return fail(err.code, err, arguments)
+    return err
   }
   return null
 }
@@ -330,7 +338,6 @@ var log = function(s, o) {
       // useful for errors, but noise in log stack
       delete ops.rootSchema
       delete ops.rootValue
-      delete ops.this
     }
     return log('chk arguments:', {
       value: s[0],

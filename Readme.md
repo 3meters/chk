@@ -76,18 +76,17 @@ schema = {
   }}
 }
 ```
-validators can access the this property using chk.call
+Within validator functions, the this object refers to the value passed into the top-level call. 
 ```js
-function valid(v) {
-  if (v < this.val) return 'fail'
-}
-var schema = {
-  validate: valid
-}
-var obj = {val: 0}
-var err = chk.call(obj, 1, schema)  // err is null
-obj = {val: 2}
-err = chk.call(obj, 1, schema)      // err is Error with message 'fail'
+  var schema = {
+    n1: {type: 'number', default: 0},
+    n2: {type: 'number', validate: n2Validate}
+  }
+  function n2Validate(v) {
+    if (v !== this.n1) return 'n2 must equal n1'
+  }
+  chk({n1:1, n2:1}, schema)  // null
+  chk({n1:1, n2:2}, schema)  // Error: 'n2 must equal n1'
 
 ```
 will run the validator for each element in the array

@@ -400,20 +400,18 @@ test.validatorFunctions = function() {
 
 
 test.validatorFunctionsCanAccessThis = function() {
-  function valid(v) {
-    if (v < this.val) return 'fail'
-  }
   var schema = {
-    validate: valid
+    n1: {type: 'number', default: 0},
+    n2: {type: 'number', validate: n2Validate}
   }
-  var obj = {val: 0}
-  var err = chk.call(obj, 1, schema)
+  function n2Validate(v) {
+    if (v !== this.n1) return 'n2 must equal n1'
+  }
+  var err = chk({n1:1, n2:1}, schema)
   assert(isNull(err))
-  obj = {val: 2}
-  err = chk.call(obj, 1, schema)
+  err = chk({n1:1, n2:2}, schema)
   assert(isError(err))
-  assert(err.info)
-  assert(!err.info.this)
+  assert('badValue' === err.code)
 }
 
 
