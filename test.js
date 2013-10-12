@@ -460,9 +460,9 @@ test.schemasCanHaveExtraFields = function() {
 
 
 // Run tests
-console.log('\nchk test\n==========')
+console.log('\nchk tests\n========')
 for (var t in test) {
   console.log(t)
   test[t]()
 }
-console.log('\n' + cTests + ' chk tests passed')
+console.log('========\n\n' + cTests + ' chk test assertions passed')

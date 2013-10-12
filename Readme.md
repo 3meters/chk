@@ -54,7 +54,7 @@ err = chk({foo: 'hello', bar: 'goodbye'}, schema)  // err is null
 err = chk({foo: 'hello', bar: 'goodbye'}, schema, {strict: true})  // err is Error with code 'badParam'
 ```
 
-### Custom Function Validators
+### Custom Validators
 ```js
 schema = {n1: {
   type: 'number',
@@ -76,7 +76,22 @@ schema = {
   }}
 }
 ```
-Within validator functions, the this object refers to the value passed into the top-level call. 
+Passing data to validators is easy. Within your validator, the this object refers to the top-level passed-in value, and the options object is passed through
+```js
+  var schema = {
+    n1: {type: 'number', default: 0},
+    n2: {type: 'number', validate: n2Validate}
+  }
+  function n2Validate(v, options) {
+    if (v !== this.n1) return 'n2 must equal n1'
+    if (options.foo) return 'options.foo must not be'
+  }
+  chk({n1:1, n2:1}, schema)  // null
+  chk({n1:1, n2:2}, schema)  // Error: 'n2 must equal n1'
+  chk({n1:1, n2:1}, schema, {foo:true})  // Error: 'options.foo must not be'
+
+```
+will run the validator for each element in the array
 ```js
   var schema = {
     n1: {type: 'number', default: 0},
@@ -90,6 +105,8 @@ Within validator functions, the this object refers to the value passed into the 
 
 ```
 will run the validator for each element in the array
+```js
+```
 ### Multiple Accepted Types
 ```js
 schema = {val1: {type: 'string|number|date'}}

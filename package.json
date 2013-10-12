@@ -1,9 +1,9 @@
 {
   "name": "chk",
-  "version": "0.1.12",
-  "description": "Simple, recursive, javascript value checker",
+  "version": "0.1.13",
+  "description": "The world's only javascript value checker",
   "homepage": "https://github.com/3meters/chk",
-  "keywords": [ "argument", "parameter", "check", "checker", "schema" ],
+  "keywords": [ "argument", "arguments", "parameter", "parameters", "check", "checker", "schema" ],
   "author": {
     "name": "George Snelling",
     "email": "george@3meters.com"
