@@ -6,9 +6,8 @@
 
   Javascript's loose typing is lovely, except when it is not.  chk lets you validate any value aginst any schema that you define. 
   
-## 
-  chk is reasonably mature, used heavily in a closed-source production system. Since diagnosing schema failures in deeply nested object can be tricky, particular care has been taken to provide detailed context in errors.
-   
+## Trust?
+  chk is mature, used heavily in a closed-source production system.
 ## Install for nodejs
 
 ```
