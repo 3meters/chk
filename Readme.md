@@ -1,4 +1,4 @@
-#chk
+#chk [![NPM version](https://badge.fury.io/js/chk.png)](http://badge.fury.io/js/chk)
 
   The world's only javascript value checker
 
