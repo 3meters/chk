@@ -1,8 +1,12 @@
 #chk
 
-  A simple, recursive, javascript value checker
+  The world's only javascript value checker
 
-  chk tests values against simple schemas. It supports required and default values, string enums, nested objects and arrays, optional type coercion, custom functional validators, and optional rejection of unknown keys.  It is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to.
+# Why ckk?
+
+  Javascript's loose typing is lovely, except when it is not.  chk lets you define your own type safety with fine-grained error reporting and user-defined validators for any property of any object.  It's easy.:
+  
+  chk is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to.
   
   chk is reasonably mature, used heavily in a closed-source production system. Since diagnosing schema failures in deeply nested object can be tricky, particular care has been taken to provide detailed context in errors.
    
