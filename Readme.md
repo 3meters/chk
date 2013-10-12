@@ -6,8 +6,6 @@
 
   Javascript's loose typing is lovely, except when it is not.  chk lets you validate any value aginst any schema that you define. 
   
-## Trust?
-  chk is mature, used heavily in a closed-source production system.
 ## Install for nodejs
 
 ```
