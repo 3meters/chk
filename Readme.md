@@ -2,9 +2,9 @@
 
   The world's only javascript value checker
 
-# Why ckk?
+## Why?
 
-  Javascript's loose typing is lovely, except when it is not.  chk lets you define your own type safety with fine-grained error reporting and user-defined validators for any property of any object.  It's easy.:
+  Javascript's loose typing is lovely, except when it is not.  chksafety fine-grained error reporting and user-defined validators for any property of any object.
   
   chk is particularly well-suited for validating public-facing web services. Chk may modify the chked value if you tell it to.
   
