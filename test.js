@@ -13,8 +13,8 @@ var chk = require('./chk')
 var test = {}
 var cTests = 0
 
-function assert(expr, msg) {
-  _assert(expr, msg)
+function assert() {
+  _assert.apply(null, arguments)
   cTests++
 }
 
