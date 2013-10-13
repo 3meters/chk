@@ -6,9 +6,6 @@
 
   Javascript's loose typing is lovely, except when it is not.  chk lets you validate any value aginst any schema that you define. 
 
-## Why is that good?
-
-  Instead of poluting your clean javascript with endless defensive assumption-checking code, chk the function's inputs agaist a simple schema object that you define describing all your assumptions, modifying the paramters if necessary.  If the input passes chk, you can party on it cleanly with confidence.  If the input fails chk, chk will help you provide a detailed error with context. 
 ## Install for nodejs
 
 ```
@@ -182,10 +179,8 @@ val.o2.o1 = {n2: 100}
 err = chk(val, schema, {strict: true}) // err is Error because schema.o2.o1 does not allow properties other than n1
 
 ```
-## Issues
-
 ## Contributing
-Contributions welcome. Run test.js. Additions and improvements to test.js particularly welcome.  
+Contributions welcome. Run node test.js. Additions and improvements to test.js particularly welcome.  
 ## Copyright
   Copyright (c) 2013 3meters.  All rights reserverd.
 
