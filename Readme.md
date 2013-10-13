@@ -5,7 +5,10 @@
 ## Why?
 
   Javascript's loose typing is lovely, except when it is not.  chk lets you validate any value aginst any schema that you define. 
-  
+
+## Why is that good?
+
+  Instead of poluting your clean javascript with endless defensive assumption-checking code, chk the function's inputs agaist a simple schema object that you define describing all your assumptions, modifying the paramters if necessary.  If the input passes chk, you can party on it cleanly with confidence.  If the input fails chk, chk will help you provide a detailed error with context. 
 ## Install for nodejs
 
 ```
@@ -90,22 +93,6 @@ Passing data to validators is easy. Within your validator, the this object refer
   chk({n1:1, n2:2}, schema)  // Error: 'n2 must equal n1'
   chk({n1:1, n2:1}, schema, {foo:true})  // Error: 'options.foo must not be'
 
-```
-will run the validator for each element in the array
-```js
-  var schema = {
-    n1: {type: 'number', default: 0},
-    n2: {type: 'number', validate: n2Validate}
-  }
-  function n2Validate(v) {
-    if (v !== this.n1) return 'n2 must equal n1'
-  }
-  chk({n1:1, n2:1}, schema)  // null
-  chk({n1:1, n2:2}, schema)  // Error: 'n2 must equal n1'
-
-```
-will run the validator for each element in the array
-```js
 ```
 ### Multiple Accepted Types
 ```js
@@ -195,6 +182,10 @@ val.o2.o1 = {n2: 100}
 err = chk(val, schema, {strict: true}) // err is Error because schema.o2.o1 does not allow properties other than n1
 
 ```
+## Issues
+
+## Contributing
+Contributions welcome. Run test.js. Additions and improvements to test.js particularly welcome.  
 ## Copyright
   Copyright (c) 2013 3meters.  All rights reserverd.
 
