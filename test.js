@@ -55,10 +55,11 @@ test.basicArray = function() {
   err = chk(val, schema)
   assert(isError(err))
   assert('badType' === err.code)
-  assert(err.info)
-  assert(err.info.rootSchema)
-  assert('array' === err.info.rootSchema.type)
-  assert(tipe.isUndefined(err.info.strict))
+  assert(err.details)
+  assert(err.details.rootSchema)
+  assert('array' === err.details.rootSchema.type)
+  assert(err.details.options)
+  assert(tipe.isUndefined(err.details.options.strict))
 }
 
 
@@ -249,8 +250,9 @@ test.strictWorks = function() {
   err = chk(value, schema, {strict: true})
   assert(isError(err))
   assert('badParam' === err.code)
-  assert(err.info)
-  assert(err.info.strict)
+  assert(err.details)
+  assert(err.details.options)
+  assert(err.details.options.strict)
 }
 test.strictWorks()
 
