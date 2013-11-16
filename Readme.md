@@ -1,6 +1,9 @@
 #chk [![NPM version](https://badge.fury.io/js/chk.png)](http://badge.fury.io/js/chk)
 
-  The world's only javascript value checker
+  Chk has been mothballed in favor of its offspring scrub (https://github.com/3meters/scrub)
+  Scrub needed to make some compatibility-breaking api changes, and so decamped to 
+  a new name.  Chk works fine and I'll happily fix bugs or accept PRs if you need them, 
+  but if you're just starting, head to scrub. 
 
 ## Why?
 
